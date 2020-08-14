@@ -41,6 +41,7 @@ index_tile: .res 2
 reset:
 mainLoop:
 	jsr initBackground
+	jsr initPalette
 	jsr initAttributes
 
 	lda #<$2000
@@ -189,13 +190,33 @@ initBackground:
 	bne @writeTiles
 	
 	rts	
+
 	
+initPalette:
+	lda $2002     ;Reset the PPU VRAM address
+	lda #$3F
+	sta $2006
+	lda #$00
+	sta $2006     ;Load $3F00 into the PPU address
+	
+	lda #$0F      ;Black
+	sta $2007
+	lda #$21      ;Light Blue
+	sta $2007
+	lda #$15      ;Red
+	sta $2007
+	lda #$30      ;White
+	sta $2007
+
+	rts
+
 
 initAttributes:
 	lda $2002    ;Reset the PPU
 	lda #$23
 	sta $2006
 	lda #$C0
+	sta $2006
 
 	lda #0
 	ldy #0
