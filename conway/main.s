@@ -37,28 +37,32 @@ background_ptr: .res 2
 buttons: .res 1
 index_tile: .res 2
 
+.segment "OAM_BUFFER"
+sprite: .res $100
+
 .segment "RESET"
 reset:
 mainLoop:
 	jsr initBackground
 	jsr initPalette
 	jsr initAttributes
-
-	lda #<$2000
-	sta index_tile
-	lda #>$2000
-	sta index_tile + 1 ;Initialize index tile
-
-	lda #%10000000    ;Enable sprites, NMI, and nametable 0
-	sta $2000         ;  write it to the PPU control register
-	lda #%00011110    ;Enable sprites and background
-	sta $2001
+	jsr initCursor
+	
+;	lda #<$2000
+;	sta index_tile
+;	lda #>$2000
+;	sta index_tile + 1 ;Initialize index tile
 	lda $2002
 	lda #$0
 	sta $2006
 	sta $2006
 	sta $2007
 	sta $2007
+
+	lda #%10000000    ;Enable sprites, NMI, and nametable 0
+	sta $2000         ;  write it to the PPU control register
+	lda #%00011110    ;Enable sprites and background
+	sta $2001
 
 @wait:
 	lda nmi_tick
@@ -69,21 +73,22 @@ mainLoop:
                   ; which interacts with the PPU quickly in a loop
                   ; The result was kinda trippy and fun
 	jsr readController
-	jsr moveIndexTile
-	lda $2002
-	lda #$0
-	sta $2006
-	sta $2006
-	sta $2007
-	sta $2007
+	jsr moveCursor
+;	jsr moveIndexTile
+;	lda $2002
+;	lda #$0
+;	sta $2006
+;	sta $2006
+;	sta $2007
+;	sta $2007
 	jmp @wait
 
 
 nmi:
-;	lda #$00     ;Forgot what all this does
-;	sta $2003    ; Well, I'll tell you what it does
-;	lda #$03     ; $2003 is the OAMADDR
-;	sta $4014    ; and $4014 is the is the DMA register
+	lda #$00     ;Forgot what all this does
+	sta $2003    ; Well, I'll tell you what it does
+	lda #>sprite ; $2003 is the OAMADDR
+	sta $4014    ; and $4014 is the is the DMA register
                  ; So writing $03 to $4014 causes everything from
                  ; $300 to $3FF to be copied to the PPU's sprite memory
                  ; I'm just guessing, but I think that this was just
@@ -94,19 +99,17 @@ nmi:
 
 
 readController:
-.scope readController
 	lda #$01     ;See asm_tutorial/controller/graphics.s for comments
 	sta $4016
 	sta buttons
 	lsr A
 	sta $4016
-readInputs:
+@readInputs:
 	lda $4016
 	lsr A
 	rol buttons
-	bcc readInputs
+	bcc @readInputs
 
-.endscope ;readController
 	rts	
 
 
@@ -229,4 +232,39 @@ initAttributes:
 	rts
 
 
+
+initCursor:
+	lda #$80     
+	sta sprite     ;Start cursor at 0 x position
+	lda #1 
+	sta sprite + 1 ;Load tile 0 into curspr
+	lda #0
+	sta sprite + 2 ;Zero attributes
+	lda #$80
+	sta sprite + 3 ;Start cursor at 0 y position
+	rts
+
+
+moveCursor:
+	lda buttons
+	and #$08
+	beq @upNotPressed
+	dec sprite
+@upNotPressed:
+	lda buttons
+	and #$04
+	beq @downNotPressed
+	inc sprite
+@downNotPressed:
+	lda buttons
+	and #$02
+	beq @leftNotPressed
+	dec sprite + 3
+@leftNotPressed:
+	lda buttons
+	and #$01
+	beq @rightNotPressed
+	inc sprite + 3
+@rightNotPressed:
 	
+	rts 
