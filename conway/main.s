@@ -36,6 +36,8 @@ nmi_tick: .res 1
 background_ptr: .res 2
 buttons: .res 1
 index_tile: .res 2
+tile_attr: .res 1
+tile_color: .res 1
 
 .segment "OAM_BUFFER"
 sprite: .res $100
@@ -43,6 +45,9 @@ sprite: .res $100
 .segment "RESET"
 reset:
 mainLoop:
+	jsr readController
+	lda #0
+	sta buttons
 	jsr initBackground
 	jsr initPalette
 	jsr initAttributes
@@ -65,22 +70,18 @@ mainLoop:
 	sta $2001
 
 @wait:
-	lda nmi_tick
-	and #$01
-	beq @wait     ;BNE should have been BEQ those are hard to get straight
-	lda #0        ;Wasn't zering nmi_tick
-	sta nmi_tick  ; So it just kept looping through moveIndexTile
-                  ; which interacts with the PPU quickly in a loop
-                  ; The result was kinda trippy and fun
-	jsr readController
+	lda nmi_tick       ;Makes the response a bit snappier,
+	sec
+	sbc #5             ;but it still needs some tuning
+	bne @wait    
+	lda #0       
+	sta nmi_tick 
+                 
+                 
+	jsr readController ;Reading the controller on every loop
 	jsr moveCursor
-;	jsr moveIndexTile
-;	lda $2002
-;	lda #$0
-;	sta $2006
-;	sta $2006
-;	sta $2007
-;	sta $2007
+	jsr paintTile
+
 	jmp @wait
 
 
@@ -94,6 +95,21 @@ nmi:
                  ; I'm just guessing, but I think that this was just
                  ; filling the screen with grey sprites
                  ; Removing these 4 lines made things work better
+	lda #23
+	sta $2006
+	lda tile_attr
+	sta $2006
+	lda tile_color
+	sta $2007
+	lda #$C0
+	sta tile_color
+	
+	lda #0
+	sta $2006
+	sta $2006
+	sta $2007
+	sta $2007
+
 	inc nmi_tick ;    
 	rti
 
@@ -234,13 +250,13 @@ initAttributes:
 
 
 initCursor:
-	lda #$80     
+	lda #0     
 	sta sprite     ;Start cursor at 0 x position
 	lda #1 
 	sta sprite + 1 ;Load tile 0 into curspr
 	lda #0
 	sta sprite + 2 ;Zero attributes
-	lda #$80
+	lda #0
 	sta sprite + 3 ;Start cursor at 0 y position
 	rts
 
@@ -249,22 +265,79 @@ moveCursor:
 	lda buttons
 	and #$08
 	beq @upNotPressed
-	dec sprite
+	lda sprite
+	sec
+	sbc #8
+	sta sprite
 @upNotPressed:
 	lda buttons
 	and #$04
 	beq @downNotPressed
-	inc sprite
+	lda sprite
+	clc
+	adc #8
+	sta sprite
 @downNotPressed:
 	lda buttons
 	and #$02
 	beq @leftNotPressed
-	dec sprite + 3
+	lda sprite + 3
+	sec
+	sbc #8
+	sta sprite + 3
 @leftNotPressed:
 	lda buttons
 	and #$01
 	beq @rightNotPressed
-	inc sprite + 3
+	lda sprite + 3
+	clc
+	adc #8
+	sta sprite + 3
 @rightNotPressed:
 	
-	rts 
+	rts
+
+;When A-button is pressed, color the tile
+; when B-button is pressed, clear the tile
+; To color the tile, first find the address of the attributes
+; table that corresponds to the cursor location. Then store this
+; value in a global. Then on the v-sync, write to this address
+; to change the color of the tile
+; To clear, do the same, except write 0 to the address
+; The address is computed by:
+; Starting at 23C0 - 23FF each address represents 2x2 tile region
+; 23C0 - 23C7 is the top row
+; 23C8 - 23CF is the next row
+; and so on
+; So do cursor sprite y position / 8 (>> 3) to get the y tile offset
+; and shift it up 4, then add it to 23C0 (the base address)
+; Then get the cursor sprite x position / 8 and add to the result
+paintTile: 
+	lda sprite       ;Load the cursor y position
+;	asl              ;Something is wrong here. I don't get it
+	lsr              ;(cursor y >> 3) << 4
+	clc
+	adc #$C0         ;Add to the low byte of the base address
+	sta tile_attr    ;Put it into the tile attributes address
+	                 ;To be written to in v-sync
+	lda sprite + 3   ;Load the cursor x position
+	lsr              ;
+	lsr              ;
+	lsr              ;cursor x / 8 (>> 3)
+	clc
+	adc tile_attr    ;Add x tile position to the y offset
+	sta tile_attr
+	lda buttons
+	and #$80
+	beq @aNotPressed
+	lda #1
+	sta tile_color
+@aNotPressed:
+	lda buttons
+	and #$40
+	beq @bNotPressed
+	lda #0
+	sta tile_color
+@bNotPressed:
+
+	rts
