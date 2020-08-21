@@ -95,14 +95,14 @@ nmi:
                  ; I'm just guessing, but I think that this was just
                  ; filling the screen with grey sprites
                  ; Removing these 4 lines made things work better
-	lda #23
+	lda #$23
 	sta $2006
 	lda tile_attr
 	sta $2006
 	lda tile_color
 	sta $2007
 	lda #$C0
-	sta tile_color
+	sta tile_attr
 	
 	lda #0
 	sta $2006
@@ -200,7 +200,7 @@ initBackground:
 	ldx #$00
 	ldy #$00
 @writeTiles:
-	lda #$03
+	lda #$02
 	sta $2007
 	jsr increment16_xy
 	cpx #<960
@@ -218,13 +218,24 @@ initPalette:
 	lda #$00
 	sta $2006     ;Load $3F00 into the PPU address
 	
+	;Palette 0
 	lda #$0F      ;Black
 	sta $2007
 	lda #$21      ;Light Blue
 	sta $2007
-	lda #$15      ;Red
+	lda #$15      ;Magenta
 	sta $2007
 	lda #$30      ;White
+	sta $2007
+
+	;Palette 1
+	lda #$0F      ;Black
+	sta $2007
+	lda #$30      ;White
+	sta $2007
+	lda #$21      ;Light Blue
+	sta $2007
+	lda #$0F      ;Black
 	sta $2007
 
 	rts
@@ -314,23 +325,26 @@ moveCursor:
 ; Then get the cursor sprite x position / 8 and add to the result
 paintTile: 
 	lda sprite       ;Load the cursor y position
-;	asl              ;Something is wrong here. I don't get it
-	lsr              ;(cursor y >> 3) << 4
+	lsr              ;Equivilant to ((y / 8) / 4) * 8
+	lsr
+	and #$F8
 	clc
 	adc #$C0         ;Add to the low byte of the base address
 	sta tile_attr    ;Put it into the tile attributes address
 	                 ;To be written to in v-sync
 	lda sprite + 3   ;Load the cursor x position
+	lsr              ;Equivilant to (x / 8) / 4
 	lsr              ;
 	lsr              ;
-	lsr              ;cursor x / 8 (>> 3)
-	clc
+	lsr              ;
+	lsr              ;
+	clc           
 	adc tile_attr    ;Add x tile position to the y offset
 	sta tile_attr
 	lda buttons
 	and #$80
 	beq @aNotPressed
-	lda #1
+	lda #$ff
 	sta tile_color
 @aNotPressed:
 	lda buttons
@@ -341,3 +355,5 @@ paintTile:
 @bNotPressed:
 
 	rts
+
+
