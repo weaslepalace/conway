@@ -36,7 +36,7 @@ nmi_tick: .res 1
 background_ptr: .res 2
 buttons: .res 1
 index_tile: .res 2
-tile_attr: .res 1
+tile_addr: .res 2
 tile_color: .res 1
 
 .segment "OAM_BUFFER"
@@ -95,14 +95,20 @@ nmi:
                  ; I'm just guessing, but I think that this was just
                  ; filling the screen with grey sprites
                  ; Removing these 4 lines made things work better
-	lda #$23
+;	lda #$23
+;	sta $2006
+;	lda tile_attr
+;	sta $2006
+;	lda tile_color
+;	sta $2007
+;	lda #$C0
+;	sta tile_attr
+	lda tile_addr + 1
 	sta $2006
-	lda tile_attr
+	lda tile_addr
 	sta $2006
 	lda tile_color
 	sta $2007
-	lda #$C0
-	sta tile_attr
 	
 	lda #0
 	sta $2006
@@ -323,37 +329,108 @@ moveCursor:
 ; So do cursor sprite y position / 8 (>> 3) to get the y tile offset
 ; and shift it up 4, then add it to 23C0 (the base address)
 ; Then get the cursor sprite x position / 8 and add to the result
-paintTile: 
-	lda sprite       ;Load the cursor y position
-	lsr              ;Equivilant to ((y / 8) / 4) * 8
-	lsr
-	and #$F8
-	clc
-	adc #$C0         ;Add to the low byte of the base address
-	sta tile_attr    ;Put it into the tile attributes address
-	                 ;To be written to in v-sync
-	lda sprite + 3   ;Load the cursor x position
-	lsr              ;Equivilant to (x / 8) / 4
-	lsr              ;
-	lsr              ;
-	lsr              ;
-	lsr              ;
-	clc           
-	adc tile_attr    ;Add x tile position to the y offset
-	sta tile_attr
+;paintTile: 
+;	lda sprite       ;Load the cursor y position
+;	lsr              ;Equivilant to ((y / 8) / 4) * 8
+;	lsr
+;	and #$F8
+;	clc
+;	adc #$C0         ;Add to the low byte of the base address
+;	sta tile_attr    ;Put it into the tile attributes address
+;	                 ;To be written to in v-sync
+;	lda sprite + 3   ;Load the cursor x position
+;	lsr              ;Equivilant to (x / 8) / 4
+;	lsr              ;
+;	lsr              ;
+;	lsr              ;
+;	lsr              ;
+;	clc           
+;	adc tile_attr    ;Add x tile position to the y offset
+;	sta tile_attr
+;	lda buttons
+;	and #$80
+;	beq @aNotPressed
+;	lda #$01
+;	sta tile_color
+;@aNotPressed:
+;	lda buttons
+;	and #$40
+;	beq @bNotPressed
+;	lda #0
+;	sta tile_color
+;@bNotPressed:
+;
+;	rts
+
+;2000	0	0
+;2020	8	1	0010 0000 0010 0000		0000 0001
+;2040	10	2	0010 0000 0100 0000		0000 0010
+;2060	18	3	0010 0000 0110 0000		0000 0011
+;2080	20	4
+;20A0	28	5
+;20C0	30	6
+;20E0	38	7
+;2100	40	8
+;2120	48	9
+;2140	50	A
+;2160	58	B	0010 0001 0110 0000		0000 1011
+;2180	60	C
+;21A0	68	D
+;21C0	70	E
+;21E0	78	F	0010 0001 1110 0000		0000 1111
+;2200	80	10	0010 0010 0000 0000		0001 0000
+
+paintTile:
+	lda sprite
+	sta R1
+	lda #0
+	Sta R2
+	jsr shift16_right_acc	
+	jsr shift16_right_acc
+	jsr shift16_right_acc
+	jsr shift16_left_acc
+	jsr shift16_left_acc
+	jsr shift16_left_acc
+	jsr shift16_left_acc
+	jsr shift16_left_acc
+	lda #$20
+	sta R4
+	lda #0
+	sta R3
+	jsr add16_acc
+	lda R1
+	sta tile_addr
+	lda R2
+	sta tile_addr + 1
+
+	lda sprite + 3
+	sta R1
+	lda #0
+	sta R2
+	jsr shift16_right_acc
+	jsr shift16_right_acc
+	jsr shift16_right_acc
+	lda tile_addr + 1
+	sta R4
+	lda tile_addr
+	sta R3
+	jsr add16_acc 
+	lda R1
+	sta tile_addr
+	lda R2
+	sta tile_addr + 1
+
 	lda buttons
 	and #$80
 	beq @aNotPressed
-	lda #$ff
+	lda #$00
 	sta tile_color
 @aNotPressed:
 	lda buttons
 	and #$40
 	beq @bNotPressed
-	lda #0
+	lda #02
 	sta tile_color
 @bNotPressed:
 
 	rts
-
-

@@ -91,13 +91,13 @@ add16_acc:
 	rts
 
 
-;Subtract two 16-but numbers
+;Subtract two 16-bit numbers
 ;@param R1 - First operand low byte
 ;@param R2 - First operand high byte
 ;@param R3 - Second operand low byte
 ;@param R4 - Second operand high byte
-;@return R5 - Result low byte
-;@return R6 - Result high byte
+;@return R1 - Result low byte
+;@return R2 - Result high byte
 subtract16_acc:
 	sec      ;Set the carry flag before subtraction
 	lda R1   ;Put the first low byte into A
@@ -107,6 +107,33 @@ subtract16_acc:
 	sbc R4   ;Subtract the second high byte from A
 	sta R2   ;Strore the result high byte
 	rts
+
+
+;Shift a 16-bit number to the right
+;@param R1 - low byte
+;@param R2 - high byte
+;@return R1 - Result low byte
+;@return R2 - Result high byte
+shift16_right_acc:
+	lda R2    ;Load the high byte
+	lsr       ;Down shift the high byte, bit 0 will shift into carry
+	sta R2    ;Save the new high byte
+	ror R1    ;Down shift the low byte, carry will shift into bit 7
+	rts
+
+
+;Shift a 16-bit number to the left
+;@param R1 - low byte
+;@param R2 - high byte
+;@return R1 - Result low byte
+;@return R2 - Result high byte
+shift16_left_acc:
+	lda R1    ;Load the low byte
+	asl       ;Up shift the low byte; bit 7 will shift into carry
+	sta R1    ;Save the new low byte
+	rol R2    ;Up shift the high byte, carry will shift into bit 0
+	rts
+
 
 ;;;;;Decrement a 16-bit number
 ;;;;;@param X - Low byte
