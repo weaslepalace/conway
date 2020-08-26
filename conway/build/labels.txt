@@ -10,8 +10,8 @@ al 000008 .R5
 al 000009 .R6
 al 00000A .R7
 al 00000B .R8
-al 00826B .__CODE_LOAD__
-al 00826B .__CODE_RUN__
+al 00825B .__CODE_LOAD__
+al 00825B .__CODE_RUN__
 al 000000 .__CODE_SIZE__
 al 000010 .__PRG_FILEOFFS__
 al 010000 .__PRG_LAST__
@@ -19,9 +19,9 @@ al 008000 .__PRG_SIZE__
 al 008000 .__PRG_START__
 al 008000 .__RESET_LOAD__
 al 008000 .__RESET_RUN__
-al 00026B .__RESET_SIZE__
-al 00826A .@bNotPressed
-al 008260 .@aNotPressed
+al 00025B .__RESET_SIZE__
+al 00825A .@bNotPressed
+al 008250 .@aNotPressed
 al 0081FC .@rightNotPressed
 al 0081ED .@leftNotPressed
 al 0081DE .@downNotPressed
