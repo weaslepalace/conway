@@ -38,6 +38,7 @@ buttons: .res 1
 index_tile: .res 2
 tile_addr: .res 2
 tile_color: .res 1
+update_request: .res 1
 
 .segment "OAM_BUFFER"
 sprite: .res $100
@@ -53,10 +54,6 @@ mainLoop:
 	jsr initAttributes
 	jsr initCursor
 	
-;	lda #<$2000
-;	sta index_tile
-;	lda #>$2000
-;	sta index_tile + 1 ;Initialize index tile
 	lda $2002
 	lda #$0
 	sta $2006
@@ -95,6 +92,9 @@ nmi:
                  ; I'm just guessing, but I think that this was just
                  ; filling the screen with grey sprites
                  ; Removing these 4 lines made things work better
+	lda #0
+	cmp update_request
+	beq @no_update_requested 
 	lda tile_addr + 1
 	sta $2006
 	lda tile_addr
@@ -107,6 +107,7 @@ nmi:
 	sta $2006
 	sta $2007
 	sta $2007
+@no_update_requested:
 
 	inc nmi_tick ;    
 	rti
@@ -125,66 +126,6 @@ readController:
 	bcc @readInputs
 
 	rts	
-
-
-moveIndexTile:
-.scope moveIndexTile
-	;Clear the index tile
-	lda $2002    ;Reset the PPU
-
-	lda index_tile + 1	
-	sta $2006
-	lda index_tile
-	sta $2006
-	lda #$03
-	sta $2007
-
-	lda #32
-	sta R3
-	lda #0
-	sta R4    ;Initialize second arithmetic operand with 32
-	
-	lda index_tile
-	sta R1
-	lda index_tile + 1
-	sta R2    ;Initialize first arithmatic operand with the value of idext_tile
-
-	;Update the index tile to a new position based on controller inputs
-	lda buttons
-	and #$08
-	beq @upNotPressed
-	jsr subtract16_acc
-@upNotPressed:
-	lda buttons
-	and #$02
-	beq @leftNotPressed
-	jsr decrement16_acc
-@leftNotPressed:
-	lda buttons
-	and #$04
-	beq @downNotPressed
-	jsr add16_acc
-@downNotPressed:
-	lda buttons
-	and #$01
-	beq @rightNotPressed
-	jsr increment16_acc
-@rightNotPressed:
-	lda R1
-	sta index_tile
-	lda R2
-	sta index_tile + 1
-
-	;Highlight the new index tile
-	lda $2002
-	lda index_tile + 1
-	sta $2006
-	lda index_tile
-	sta $2006
-	lda #0
-	sta $2007	
-.endscope ;moveIndexTile
-	rts
 
 
 initBackground:
@@ -348,12 +289,21 @@ paintTile:
 	beq @aNotPressed
 	lda #$00
 	sta tile_color
+	lda #1
+	sta update_request
+	rts
 @aNotPressed:
 	lda buttons
 	and #$40
 	beq @bNotPressed
 	lda #02
 	sta tile_color
-@bNotPressed:
-
+	lda #1
+	sta update_request
 	rts
+@bNotPressed:
+	lda #0
+	sta update_request
+	rts
+
+
