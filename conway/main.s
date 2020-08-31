@@ -279,9 +279,9 @@ paintTile:
 	jsr shift16_left_acc
 	
 	;This is just a test
-	lda sprite + 3
+	lda sprite
 	sta R3
-	jsr findRightNeighbour
+	jsr findUpperNeighbour
 	;That was just a test
 	
 
@@ -378,4 +378,26 @@ findRightNeighbour:
 	jsr subtract16_acc
 	rts
 	
-		
+
+;Find the neighbour above an index
+;@param R1 - index position low byte
+;@param R2 - index position high byte
+;@param R3 - index y position
+;@param R1 - Upper Neighbour Position low byte
+;@param R2 - Upper Neighbour Position high byte
+findUpperNeighbour:
+	lda R3
+	beq @wrapAround
+	lda #32
+	sta R3
+	lda #0
+	sta R4
+	jsr subtract16_acc
+	rts
+@wrapAround:
+	lda #<928
+	sta R3
+	lda #>928
+	sta R4
+	jsr add16_acc
+	rts
