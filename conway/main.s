@@ -215,16 +215,19 @@ initAttributes:
 	rts
 
 
-
+;FIXME: The cursor appears to be off by 1 horizontal scan line.
+;When loading it at position 0, it's drawn at postion 1
+;Loading it a 0xFF makes it disappear since that pos is off screen
+;Tried removing all the code except the DMA stuff; didn't help
 initCursor:
-	lda #0     
-	sta sprite     ;Start cursor at 0 x position
+	lda #8     
+	sta sprite     ;Start cursor at 0 y position
 	lda #1 
-	sta sprite + 1 ;Load tile 0 into curspr
+	sta sprite + 1 ;Load tile 1 into cursor
 	lda #0
 	sta sprite + 2 ;Zero attributes
 	lda #0
-	sta sprite + 3 ;Start cursor at 0 y position
+	sta sprite + 3 ;Start cursor at 0 x position
 	rts
 
 
@@ -274,6 +277,14 @@ paintTile:
 	Sta R2
 	jsr shift16_left_acc
 	jsr shift16_left_acc
+	
+	;This is just a test
+	lda sprite + 3
+	sta R3
+	jsr findLeftNeighbour
+	;That was just a test
+	
+
 	lda #$20
 	sta R4
 	lda #0
@@ -323,4 +334,27 @@ paintTile:
 	sta update_request
 	rts
 
+;Find the eight neighbours of an index
+;@param R1 - index position low byte
+;@param R2 - index position high byte
+;@param R3 - index x position
+;@return R1 - Left Neighbour Position low byte
+;@return R2 - Left Neighbour Position high byte
+findLeftNeighbour:
+	sec
+	lda R3
+	sbc #8
+	bcc @wrapAround 
+	jsr decrement16_acc
+	rts
+@wrapAround:
+	lda #31
+	sta R3
+	lda #0
+	sta R4
+	jsr add16_acc
+	rts
 
+	
+	
+		

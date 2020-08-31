@@ -36,8 +36,10 @@ life_neighbour: .res 16
 
 
 
+.segment "RESET"
+
 life_execute:
-	lda -1
+	lda #-1
 	sta life_y            ;Initialize y to -1
 	lda #$00
 	sta life_x            ;Initialize x to 0
