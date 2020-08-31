@@ -281,7 +281,7 @@ paintTile:
 	;This is just a test
 	lda sprite + 3
 	sta R3
-	jsr findLeftNeighbour
+	jsr findRightNeighbour
 	;That was just a test
 	
 
@@ -334,7 +334,7 @@ paintTile:
 	sta update_request
 	rts
 
-;Find the eight neighbours of an index
+;Find the neighbour to the left of an index
 ;@param R1 - index position low byte
 ;@param R2 - index position high byte
 ;@param R3 - index x position
@@ -355,6 +355,27 @@ findLeftNeighbour:
 	jsr add16_acc
 	rts
 
-	
+
+
+;Find the neighbour to the right of an index
+;@param R1 - index position low byte
+;@param R2 - index position high byte
+;@param R3 - index x position
+;@return R1 - Right Neighbour Position low byte
+;@return R2 - Right Neighbour Position high byte
+findRightNeighbour:
+	clc
+	lda R3
+	adc #8
+	bcs @wrapAround
+	jsr increment16_acc
+	rts
+@wrapAround:
+	lda #31
+	sta R3
+	lda #0 
+	sta R4
+	jsr subtract16_acc
+	rts
 	
 		
