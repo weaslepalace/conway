@@ -1,6 +1,9 @@
 ;Game Code for Conway's Game of Life
 .debuginfo +
 
+.include "maths.inc"
+.include "zp_reg.inc"
+
 .import NES_PRG_BANKS, NES_CHR_BANKS, NES_MAPPER, NES_MIRRORING
 .segment "HEADER"
 	.byte 'N', 'E', 'S', $1A
@@ -21,17 +24,16 @@
 	.incbin "sprite_sheet.chr"
 
 
-.include "maths.s"
 
 .segment "ZEROPAGE"
-R1: .res 1
-R2: .res 1
-R3: .res 1
-R4: .res 1
-R5: .res 1
-R6: .res 1
-R7: .res 1
-R8: .res 1
+;R1: .res 1
+;R2: .res 1
+;R3: .res 1
+;R4: .res 1
+;R5: .res 1
+;R6: .res 1
+;R7: .res 1
+;R8: .res 1
 nmi_tick: .res 1
 background_ptr: .res 2
 inputs: .res 1

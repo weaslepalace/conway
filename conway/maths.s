@@ -1,13 +1,8 @@
 ;Simple Maths Library
 ;See licence.txt for licence information
 
-;.import R1, R2, R3, R4, R5, R6, R7, R8
-.globalzp R1, R2, R3, R4, R5, R6, R7, R8 ;Including this made a warning go away
-                                ;Warning: Didn't use zeropage addressing for R1
-                                ;It defines R1-R8 as zeropage labels
-                                ;There is also .importzp and .exportzp
-                                ;Which look like they do similar things
-                                ;Not sure what the best approach is
+
+.include "zp_reg.inc"
 
 .segment "ZEROPAGE"
 
@@ -32,6 +27,7 @@ multiply8:
 	ror result16
 	bcc @loop
 	sta result16 + 1
+.export multiply8
 
 
 ;Decrement a 16-bit number using general purpose (zeropage) registers
@@ -46,6 +42,7 @@ decrement16_acc:
 @skip:
 	dec R1     ;Then decrement low byte
 	rts
+.export decrement16_acc
 
 
 ;Increment a 16-bit number using general purpose (zeropage) registers
@@ -59,6 +56,7 @@ increment16_acc:
 	inc R2     ; increment high byte
 @skip:
 	rts
+.export increment16_acc
 
 
 ;Increment a 16-bit number using x and y registers
@@ -72,6 +70,8 @@ increment16_xy:
 	iny         ;  increment high byte
 @skip:          ;
 	rts	
+.export increment16_xy
+
 
 ;Add two 16-bit numbers
 ;@param R! - First operand low byte
@@ -89,6 +89,7 @@ add16_acc:
 	adc R4   ;Add the second high byte to A, the carry flag will do it's thing
 	sta R2   ;Store the result high byte
 	rts
+.export add16_acc
 
 
 ;Subtract two 16-bit numbers
@@ -107,6 +108,7 @@ subtract16_acc:
 	sbc R4   ;Subtract the second high byte from A
 	sta R2   ;Strore the result high byte
 	rts
+.export subtract16_acc
 
 
 ;Shift a 16-bit number to the right
@@ -120,6 +122,7 @@ shift16_right_acc:
 	sta R2    ;Save the new high byte
 	ror R1    ;Down shift the low byte, carry will shift into bit 7
 	rts
+.export shift16_right_acc
 
 
 ;Shift a 16-bit number to the left
@@ -133,89 +136,6 @@ shift16_left_acc:
 	sta R1    ;Save the new low byte
 	rol R2    ;Up shift the high byte, carry will shift into bit 0
 	rts
+.export shift16_left_acc
 
 
-;;;;;Decrement a 16-bit number
-;;;;;@param X - Low byte
-;;;;;@param Y - High byte
-;;;;;@return X - Decremented low byte
-;;;;;@return Y - Decremented high byte
-;;;;.macro DECREMENT_16
-;;;;.scope
-;;;;	txa        ;Move low byte into A to test if zero
-;;;;	bne @skip  ;If low byte == 0
-;;;;	dey        ;  decrement high byte
-;;;;@skip:         ;
-;;;;	dex        ;Decrement low byte
-;;;;.endscope      ;
-;;;;.endmacro      ;
-;;;;
-;;;;
-;;;;;Increment a 16-bit number
-;;;;;@param X - Low byte
-;;;;;@param Y - High byte
-;;;;;@return X - Incremented low byte
-;;;;;@return Y - Incremented high byte
-;;;;.macro INCREMENT_16
-;;;;.scope
-;;;;	inx         ;Increment low byte
-;;;;	txa         ;Move low byte into A to test if zero (overflow)
-;;;;	bne @skip   ;If low byte == 0
-;;;;	iny         ;  increment high byte
-;;;;@skip:          ;
-;;;;.endscope       ;
-;;;;.endmacro       ;
-;;;;
-;;;;
-;;;;;Add an immediate value to a 16-bit number
-;;;;;@param X - Param 1 low byte
-;;;;;@param Y - Param 2 high byte
-;;;;;@param IVAL - Immediate value
-;;;;;@Return X - Result low byte
-;;;;;@Return Y - Result high byte
-;;;;.macro ADD_16_IMMEDIATE ;IVAL
-;;;;	clc           ;Clear carry flag before addition
-;;;;	txa           ;Load the low byte into A
-;;;;	;Add low byte of immedieate value
-;;;;;	adc #<(.right (.tcount ({IVAL}) - 1,  {IVAL})) 
-;;;;	tax           ;Store the result back in X
-;;;;	tya           ;Load the high byte into A
-;;;;    ;Add the high bytes, let the carry flag do its thing
-;;;;;	adc #>(.right (.tcount ({IVAL}) - 1, {IVAL})
-;;;;	tay           ;Store the low byte back in y
-;;;;.endmacro
-;;;;	
-;;;;
-;;;;;.macro IS_IMMEDIATE ARG
-;;;;;;	.out "Macro IS_IMMEDIATE"
-;;;;;;	.out (.string ({ARG}))
-;;;;;	(.match (.left (1, {ARG}), #))
-;;;;;.endmacro
-;;;;
-;;;;.macro CHECK_IMMEDIATE ARG
-;;;;	.out "Macro CHECK_IMMEDIATE"
-;;;;	.if !(.match (.left (1, {ARG}), #))
-;;;;		.error "Argument must be an immediate value"
-;;;;	.endif
-;;;;.endmacro
-;;;;
-;;;;;Subtract an immediate value from a 16=bit number
-;;;;;@param X - Param 1 low byte
-;;;;;@param Y - Param 2 high byte
-;;;;;@param IVAL - Immediate value
-;;;;;@Return Y - Result low byte
-;;;;;@Return A - Result high byte
-;;;;.macro SUB_16_IMMEDIATE IVAL
-;;;;;	CHECK_IMMEDIATE ({IVAL})
-;;;;	.if !(.match (.left (1, {IVAL}), #))
-;;;;		.error "Argument must be an immediate value"
-;;;;	.endif
-;;;;	sec           ;Set the carry flag before subtraction
-;;;;	txa           ;Load the lig byte into A
-;;;;    ;Subtract low byte of IVAL from the low byte
-;;;;	sbc #<(.right (.tcount ({IVAL})-1, {IVAL}))
-;;;;	tax           ;Store the result back in X
-;;;;	tya           ;Load the high byte into A
-;;;;	sbc #>(.right (.tcount ({IVAL})-1, {IVAL}))
-;;;;	tay           ;Store the result back in Y
-;;;;.endmacro
