@@ -31,7 +31,7 @@ inputs: .res 1
 mask: .res 1
 buttons: .res 1
 index_tile: .res 2
-tile_addr: .res 2
+tile_addr: .res 16
 tile_color: .res 1
 update_request: .res 1
 
@@ -41,10 +41,17 @@ sprite: .res $100
 .segment "RESET"
 reset:
 mainLoop:
-	lda #$21
-	sta tile_addr + 1
-	lda #21
-	sta tile_addr
+
+	ldx 0
+@init_tiles:
+	lda #$20
+	sta tile_addr + 1, x
+	sta tile_addr, x
+	inx
+	inx
+	cpx #16
+	bne @init_tiles
+	
 	
 	lda #$FF
 	sta mask
@@ -92,15 +99,23 @@ nmi:
                  ; I'm just guessing, but I think that this was just
                  ; filling the screen with grey sprites
                  ; Removing these 4 lines made things work better
+
 	lda #0
 	cmp update_request
 	beq @no_update_requested 
-	lda tile_addr + 1
+
+	ldx 0
+@copy_tiles:
+	lda tile_addr + 1, x
 	sta $2006
-	lda tile_addr
+	lda tile_addr, x
 	sta $2006
 	lda tile_color
 	sta $2007
+	inx
+	inx
+	cpx #16
+	bne @copy_tiles
 	
 	lda #0
 	sta $2006
@@ -296,17 +311,36 @@ paintTile:
 	jsr add16_acc 
 
 	;This is just a test
+	lda R1
+	sta R5
+	lda R2
+	sta R6
+
 	lda sprite + 3
 	sta R3
 	lda sprite
 	sta R4
 	jsr findLowerRightNeighbour
-	;That was just a test
-
 	lda R1
 	sta tile_addr
 	lda R2
 	sta tile_addr + 1
+
+	lda R5
+	sta R1
+	lda R6
+	sta R2
+	lda sprite + 3
+	sta R3
+	lda sprite
+	sta R4
+	jsr findUpperRightNeighbour
+	lda R1
+	sta tile_addr + 2
+	lda R2
+	sta tile_addr + 3
+
+	;That was just a test
 
 	
 
