@@ -24,16 +24,7 @@
 	.incbin "sprite_sheet.chr"
 
 
-
 .segment "ZEROPAGE"
-;R1: .res 1
-;R2: .res 1
-;R3: .res 1
-;R4: .res 1
-;R5: .res 1
-;R6: .res 1
-;R7: .res 1
-;R8: .res 1
 nmi_tick: .res 1
 background_ptr: .res 2
 inputs: .res 1
@@ -280,12 +271,6 @@ paintTile:
 	jsr shift16_left_acc
 	jsr shift16_left_acc
 	
-	;This is just a test
-	lda sprite
-	sta R3
-	jsr findLowerNeighbour
-	;That was just a test
-	
 
 	lda #$20
 	sta R4
@@ -309,10 +294,21 @@ paintTile:
 	lda tile_addr
 	sta R3
 	jsr add16_acc 
+
+	;This is just a test
+	lda sprite + 3
+	sta R3
+	lda sprite
+	sta R4
+	jsr findUpperLeftNeighbour
+	;That was just a test
+
 	lda R1
 	sta tile_addr
 	lda R2
 	sta tile_addr + 1
+
+	
 
 	lda buttons
 	and #$80
@@ -428,3 +424,22 @@ findLowerNeighbour:
 	sta R4
 	jsr subtract16_acc
 	rts
+
+
+;Find the nieghbour above and to the left of an index
+;@param R1 - index position low byte
+;@param R2 - index position high byte
+;@param R3 - index x position
+;@param R4 - index y position
+;@return R1 - Upper Left Neighbour Position low byte
+;@return R2 - Upper Left Neighbour Position high byte
+findUpperLeftNeighbour:
+	lda R4
+	sta R5
+	jsr findLeftNeighbour
+	lda R5
+	sta R3
+	jsr findUpperNeighbour
+	rts
+
+	
