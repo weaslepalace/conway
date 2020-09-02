@@ -300,7 +300,7 @@ paintTile:
 	sta R3
 	lda sprite
 	sta R4
-	jsr findLowerLeftNeighbour
+	jsr findLowerRightNeighbour
 	;That was just a test
 
 	lda R1
@@ -426,7 +426,7 @@ findLowerNeighbour:
 	rts
 
 
-;Find the nieghbour above and to the left of an index
+;Find the neighbour above and to the left of an index
 ;@param R1 - index position low byte
 ;@param R2 - index position high byte
 ;@param R3 - index x position
@@ -460,4 +460,38 @@ findLowerLeftNeighbour:
 	jsr findLowerNeighbour
 	rts
 
-	
+
+
+;Find the neighbour	above and to the right of an index
+;@param R1 - index position low byte
+;@param R2 - index position high byte
+;@param R3 - index x position
+;@param R4 - index y position
+;@return R1 - Upper Right Neighbour low byte
+;@return R2 - Upper Right Neighbour high byte
+findUpperRightNeighbour:
+	lda R4
+	pha
+	jsr findRightNeighbour
+	pla
+	sta R3
+	jsr findUpperNeighbour
+	rts
+
+
+;Find the neighbour	below and to the right of an index
+;@param R1 - index position low byte
+;@param R2 - index position high byte
+;@param R3 - index x position
+;@param R4 - index y position
+;@return R1 - Lower Right Neighbour low byte
+;@return R2 - Lower Right Neighbour high byte
+findLowerRightNeighbour:
+	lda R4
+	pha
+	jsr findRightNeighbour
+	pla
+	sta R3
+	jsr findLowerNeighbour
+	rts
+
