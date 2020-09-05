@@ -114,7 +114,7 @@ nmi:
 	sta $2007
 	inx
 	inx
-	cpx #16
+	cpx #8
 	bne @copy_tiles
 	
 	lda #0
@@ -293,9 +293,11 @@ paintTile:
 	sta R3
 	jsr add16_acc
 	lda R1
-	sta tile_addr
+	sta R5
+;	sta tile_addr
 	lda R2
-	sta tile_addr + 1
+	sta R6
+;	sta tile_addr + 1
 
 	lda sprite + 3
 	sta R1
@@ -304,9 +306,11 @@ paintTile:
 	jsr shift16_right_acc
 	jsr shift16_right_acc
 	jsr shift16_right_acc
-	lda tile_addr + 1
+;	lda tile_addr + 1
+	lda R6
 	sta R4
-	lda tile_addr
+;	lda tile_addr
+	lda R5
 	sta R3
 	jsr add16_acc 
 
@@ -340,6 +344,34 @@ paintTile:
 	lda R2
 	sta tile_addr + 3
 
+
+	lda R5
+	sta R1
+	lda R6
+	sta R2
+	lda sprite + 3
+	sta R3
+	lda sprite
+	sta R4
+	jsr findUpperLeftNeighbour
+	lda R1
+	sta tile_addr + 4
+	lda R2
+	sta tile_addr + 5
+
+	lda R5
+	sta R1
+	lda R6
+	sta R2
+	lda sprite + 3
+	sta R3
+	lda sprite
+	sta R4
+	jsr findLowerLeftNeighbour
+	lda R1
+	sta tile_addr + 6
+	lda R2
+	sta tile_addr + 7
 	;That was just a test
 
 	
