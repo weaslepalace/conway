@@ -12,6 +12,12 @@ R6: .res 1
 R7: .res 1
 R8: .res 1
 
+;Arithmatic registers for use within interrupts
+R1i: .res 1
+R2i: .res 1
+R3i: .res 1
+R4i: .res 1
+
 ;Labels must be exported before they could be imported
 ;Who knew?
 ;The linker is garbage and will not respect address as exported
@@ -26,4 +32,7 @@ R8: .res 1
 .exportzp R6 ;:= $05
 .exportzp R7 ;:= $06
 .exportzp R8 ;:= $07
-
+.exportzp R1i
+.exportzp R2i
+.exportzp R3i
+.exportzp R4i

@@ -74,7 +74,7 @@ increment16_xy:
 
 
 ;Add two 16-bit numbers
-;@param R! - First operand low byte
+;@param R1 - First operand low byte
 ;@param R2 - First operand high byte
 ;@param R3 - Second operand low byte
 ;@param R4 - Second operand high byte
@@ -90,6 +90,23 @@ add16_acc:
 	sta R2   ;Store the result high byte
 	rts
 .export add16_acc
+
+
+;Add two 16-bit numbers from within an interrupt routine
+;@param R1i - Fisrt operand low byte
+;@param R2i - First operand high byte
+;@param R3i - Second operand low byte
+;@param R4i - Second operand high byte
+add16_acc_int:
+	clc
+	lda R1i
+	adc R3i
+	sta R1i
+	lda R2i
+	adc R4i
+	sta R2i
+	rts
+.export add16_acc_int
 
 
 ;Subtract two 16-bit numbers

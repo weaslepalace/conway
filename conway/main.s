@@ -34,9 +34,14 @@ index_tile: .res 2
 tile_addr: .res 16
 tile_color: .res 1
 update_request: .res 1
+game_map_addr: .res 2
+map_offset: .res 2
 
 .segment "OAM_BUFFER"
 sprite: .res $100
+
+.segment "BSS"
+game_map: .res 960
 
 .segment "RESET"
 reset:
@@ -52,7 +57,15 @@ mainLoop:
 	cpx #16
 	bne @init_tiles
 	
-	
+	lda #<game_map
+	sta game_map_addr
+	lda #>game_map
+	sta game_map_addr + 1
+
+	lda #0
+	sta map_offset
+	sta map_offset + 1
+
 	lda #$FF
 	sta mask
 	jsr readController
@@ -84,12 +97,17 @@ mainLoop:
                  
 	jsr readController 
 	jsr moveCursor
-	jsr paintTile
+;	jsr paintTile
 
 	jmp @wait
 
 
 nmi:
+	php    ;
+	pha    ;  Prevent race conditions
+	txa    ;  By pushing the registers to the stack
+	pha    ;  then popping them before exiting
+
 	lda #$00     ;Forgot what all this does
 	sta $2003    ; Well, I'll tell you what it does
 	lda #>sprite ; $2003 is the OAMADDR
@@ -100,31 +118,77 @@ nmi:
                  ; filling the screen with grey sprites
                  ; Removing these 4 lines made things work better
 
-	lda #0
-	cmp update_request
-	beq @no_update_requested 
+;	lda #0
+;	cmp update_request
+;	beq @no_update_requested 
 
-	ldx 0
-@copy_tiles:
-	lda tile_addr + 1, x
-	sta $2006
-	lda tile_addr, x
-	sta $2006
-	lda tile_color
-	sta $2007
-	inx
-	inx
-	cpx #8
-	bne @copy_tiles
-	
 	lda #0
+	sta R1i
+	lda #$20
+	sta R2i
+	lda map_offset
+	sta R3i
+	lda map_offset + 1
+	sta R4i
+	jsr add16_acc_int
+	lda R1i
+	sta tile_addr
+	lda R2i
+	sta tile_addr + 1
+	lda #<960
+	sta R1i
+	lda #>960
+	sta R2i
+	jsr add16_acc_int
+	lda R1i
+	sta game_map_addr
+	lda R2i
+	sta game_map_addr + 1
+	ldy #0
+	lda tile_addr + 1
 	sta $2006
+	lda tile_addr
 	sta $2006
+@copy_tiles:
+	lda (game_map_addr), Y    ;Google "indirect indexed addressing"
 	sta $2007
-	sta $2007
-@no_update_requested:
+	iny
+	cpy #(32 * 2)
+	bne @copy_tiles
+	lda #<(32 * 2)
+	sta R1i
+	lda #>(32 * 2)
+	sta R2i
+	jsr add16_acc_int
+	lda R1i
+	sta map_offset
+	lda R2i
+	sta map_offset + 1
+	
+	lda #<960
+	cmp map_offset
+	bne @noMapOffsetOvf
+	lda #>960
+	cmp map_offset + 1
+	bne @noMapOffsetOvf
+	lda #0
+	sta map_offset
+	sta map_offset + 1
+@noMapOffsetOvf:
+		
+;	lda #0
+;	sta $2006
+;	sta $2006
+;	sta $2007
+;	sta $2007
+;@no_update_requested:
 
 	inc nmi_tick ;    
+
+	pla    ; Pop the registers before returning
+	tax    ;
+	pla    ;
+	plp    ;
 	rti
 
 
