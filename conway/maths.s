@@ -45,6 +45,21 @@ decrement16_acc:
 .export decrement16_acc
 
 
+;Decrement a 16-bit number using general purpose (zeropage) registers
+;@param X - Low Byte
+;@raram Y - High Byte
+;@return X - Decremented low byte
+;@return Y - Decremented high byte
+decrement16_xy:
+	cpx #0     ;Test for low byte = zero
+	bne @skip  ;If low byte is zero
+	dey        ; Decrement high byte
+@skip:
+	dex        ;Then decrement low byte
+	rts
+.export decrement16_xy
+
+
 ;Increment a 16-bit number using general purpose (zeropage) registers
 ;@param R1 - Low Byte
 ;@raram R2 - High Byte

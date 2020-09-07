@@ -37,6 +37,7 @@ update_request: .res 1
 game_map_addr: .res 2
 map_offset: .res 2
 
+
 .segment "OAM_BUFFER"
 sprite: .res $100
 
@@ -98,7 +99,10 @@ mainLoop:
 	jsr readController 
 	jsr moveCursor
 ;	jsr paintTile
-
+	lda tile_color
+	eor #3
+	sta tile_color
+	jsr paintBackground
 	jmp @wait
 
 
@@ -118,6 +122,7 @@ nmi:
                  ; filling the screen with grey sprites
                  ; Removing these 4 lines made things work better
 
+	lda $2002
 ;	lda #0
 ;	cmp update_request
 ;	beq @no_update_requested 
@@ -149,12 +154,14 @@ nmi:
 	sta $2006
 	lda tile_addr
 	sta $2006
+
 @copy_tiles:
 	lda (game_map_addr), Y    ;Google "indirect indexed addressing"
-	sta $2007
-	iny
-	cpy #(32 * 2)
-	bne @copy_tiles
+	sta $2007                 ;
+	iny                       ;
+	cpy #(32 * 2)             ;
+	bne @copy_tiles           ;
+
 	lda #<(32 * 2)
 	sta R1i
 	lda #>(32 * 2)
@@ -591,7 +598,6 @@ findLowerLeftNeighbour:
 	rts
 
 
-
 ;Find the neighbour	above and to the right of an index
 ;@param R1 - index position low byte
 ;@param R2 - index position high byte
@@ -625,3 +631,46 @@ findLowerRightNeighbour:
 	jsr findLowerNeighbour
 	rts
 
+
+;@param R5 - Background color
+paintBackground:
+	lda #<game_map
+	sta R1
+	lda #>game_map
+	sta R2
+	lda #<960
+	sta R3
+	lda #>960
+	sta R4
+	lda tile_color
+	sta R5
+	jsr memset
+	rts
+
+
+;@param R1 - Base address low byte
+;@param R2 - Base address high byte
+;@param R3 - Count low byte
+;@param R4 - Count high byte
+;@param R5 - Set value
+memset:
+	clc
+	ldy #0
+	ldx #0
+@writeLoop:
+	lda R5
+	sta (R1), Y
+	iny
+	bne @noIncMSB
+	inc R2
+	inx
+@noIncMSB:
+	cpy R3
+	bne @writeLoop
+	cpx R4
+	bne @writeLoop
+	rts 
+	
+	
+	
+	

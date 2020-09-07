@@ -3,6 +3,7 @@
 
 .import multiply8
 .import decrement16_acc
+.import decrement16_xy
 .import increment16_acc
 .import increment16_xy
 .import add16_acc
