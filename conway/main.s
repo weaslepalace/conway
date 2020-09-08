@@ -26,6 +26,7 @@
 
 .segment "ZEROPAGE"
 nmi_tick: .res 1
+nmi_tick_count: .res 1
 background_ptr: .res 2
 inputs: .res 1
 mask: .res 1
@@ -37,6 +38,9 @@ update_request: .res 1
 game_map_addr: .res 2
 map_offset: .res 2
 
+
+.segment "NT_BUFFER"
+nt_buffer: .res 160
 
 .segment "OAM_BUFFER"
 sprite: .res $100
@@ -90,11 +94,18 @@ mainLoop:
 	sta $2001
 
 @wait:
-	lda #1
-	cmp nmi_tick
-	bne @wait    
+	lda nmi_tick
+	beq @wait
+	lda #0
+	sta nmi_tick
+	jsr	paintBackground
+
+	inc nmi_tick_count
+	lda #15
+	cmp nmi_tick_count
+	bne @wait
 	lda #0       
-	sta nmi_tick 
+	sta nmi_tick_count 
                  
 	jsr readController 
 	jsr moveCursor
@@ -102,7 +113,7 @@ mainLoop:
 	lda tile_color
 	eor #3
 	sta tile_color
-	jsr paintBackground
+	jsr updateBackground
 	jmp @wait
 
 
@@ -122,67 +133,23 @@ nmi:
                  ; filling the screen with grey sprites
                  ; Removing these 4 lines made things work better
 
-	lda $2002
+;;	lda $2002
 ;	lda #0
 ;	cmp update_request
 ;	beq @no_update_requested 
 
-	lda #0
-	sta R1i
-	lda #$20
-	sta R2i
-	lda map_offset
-	sta R3i
-	lda map_offset + 1
-	sta R4i
-	jsr add16_acc_int
-	lda R1i
-	sta tile_addr
-	lda R2i
-	sta tile_addr + 1
-	lda #<960
-	sta R1i
-	lda #>960
-	sta R2i
-	jsr add16_acc_int
-	lda R1i
-	sta game_map_addr
-	lda R2i
-	sta game_map_addr + 1
-	ldy #0
 	lda tile_addr + 1
 	sta $2006
 	lda tile_addr
 	sta $2006
-
+	ldy #(32 * 4)
+	dey
 @copy_tiles:
-	lda (game_map_addr), Y    ;Google "indirect indexed addressing"
-	sta $2007                 ;
-	iny                       ;
-	cpy #(32 * 2)             ;
-	bne @copy_tiles           ;
+	lda nt_buffer, Y   
+	sta $2007
+	dey               ;
+	bpl @copy_tiles           ;
 
-	lda #<(32 * 2)
-	sta R1i
-	lda #>(32 * 2)
-	sta R2i
-	jsr add16_acc_int
-	lda R1i
-	sta map_offset
-	lda R2i
-	sta map_offset + 1
-	
-	lda #<960
-	cmp map_offset
-	bne @noMapOffsetOvf
-	lda #>960
-	cmp map_offset + 1
-	bne @noMapOffsetOvf
-	lda #0
-	sta map_offset
-	sta map_offset + 1
-@noMapOffsetOvf:
-		
 ;	lda #0
 ;	sta $2006
 ;	sta $2006
@@ -633,7 +600,7 @@ findLowerRightNeighbour:
 
 
 ;@param R5 - Background color
-paintBackground:
+updateBackground:
 	lda #<game_map
 	sta R1
 	lda #>game_map
@@ -644,7 +611,21 @@ paintBackground:
 	sta R4
 	lda tile_color
 	sta R5
-	jsr memset
+	jsr memset16
+	rts
+
+
+paintBackground:
+	lda #<nt_buffer
+	sta R1
+	lda #>nt_buffer
+	sta R2
+	lda #<game_map
+	sta R3
+	lda #>game_map
+	sta R4
+	lda #(32 * 3)
+	jsr memmove8
 	rts
 
 
@@ -653,8 +634,7 @@ paintBackground:
 ;@param R3 - Count low byte
 ;@param R4 - Count high byte
 ;@param R5 - Set value
-memset:
-	clc
+memset16:
 	ldy #0
 	ldx #0
 @writeLoop:
@@ -670,7 +650,39 @@ memset:
 	cpx R4
 	bne @writeLoop
 	rts 
+
+
+;Set up to 255 bytes of a block of memory to a specified value
+;@param R1 - Base address low byte
+;@param R2 - Base address high byte
+;@param R3 - Set value
+;@param R4 - Number of bytes to set
+memset8:
+	ldy #0
+@writeLoop:
+	lda R3
+	sta (R1), Y
+	iny
+	cpy R4
+	bne @writeLoop
+	rts
 	
 	
 	
+;Copy a block of memory to another location; up to 255 bytes
+;@param R1 - Destination address low byte
+;@param R2 - Destination address high byte
+;@param R3 - Source address low byte
+;@param R4 - Source address high byte
+;@param R5 - Number of bytes to copy
+memmove8:
+	ldy #0
+@copyLoop:
+	lda (R3), Y
+	sta (R2), Y
+	iny
+	cpy R5
+	bne @copyLoop
+	rts
+		
 	
