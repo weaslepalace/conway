@@ -618,17 +618,69 @@ updateBackground:
 
 
 paintBackground:
+	;Add map_offset to game_map ;
+	lda map_offset              ;
+	sta R1                      ;
+	lda map_offset + 1          ;
+	sta R2                      ;
+	lda #<game_map              ;
+	sta R3                      ;
+	lda #>game_map              ;
+	sta R4                      ;
+	jsr add16_acc               ;
+	lda R1                      ;
+	sta R3                      ;
+	lda R2                      ;
+	sta R4                      ;
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 	lda #<nt_buffer
 	sta R1
 	lda #>nt_buffer
 	sta R2
-	lda #<game_map
-	sta R3
-	lda #>game_map
-	sta R4
-	lda #(32 * 3)
+	lda #(32 * 4)
 	sta R5
 	jsr memmove8
+
+	;Increment map_offset in (32 * 4) byte chunks until it's > 960
+	lda map_offset
+	sta R1
+	lda map_offset + 1
+	sta R2
+	lda #<(960 - (32 * 4))
+	sta R3
+	lda #>(960 - (32 * 4))
+	sta R4
+	jsr is_greater16
+	bne @noOffsetReset
+
+	lda #0
+	sta map_offset
+	sta map_offset + 1
+	sta tile_addr
+	lda #$20
+	sta tile_addr + 1
+	rts
+
+@noOffsetReset:
+	lda #<(32 * 4)
+	sta R3
+	lda #>(32 * 4)
+	sta R4
+	jsr add16_acc
+	lda R1
+	sta map_offset
+	lda R2
+	sta map_offset + 1
+	lda tile_addr
+	sta R1
+	lda tile_addr + 1  ;Never update tile_addr unless update_request is clear
+	sta R2
+	jsr add16_acc
+	lda R1
+	sta tile_addr
+	lda R2
+	sta tile_addr + 1
 	rts
 
 

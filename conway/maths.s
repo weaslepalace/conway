@@ -171,3 +171,24 @@ shift16_left_acc:
 .export shift16_left_acc
 
 
+;Evaluate to true (set zero flag) if the first 2-byte param (A)
+;is greater than the second (B)
+;@param R1 - A param low byte
+;@param R2 - A param high byte
+;@param R3 - B param low byte
+;@param R4 - B param high byte
+is_greater16:
+	sec        ;Clear the carry flag before subtraction
+	lda R1     ;
+	sbc R3     ;
+	lda R2     ;
+	sbc R4     ;Subtract the two operands
+	bpl @true  ;If the result is positive then A > B is true
+	lda #$FF   ;Load FF into A which will clear the zero flag
+	rts
+@true:
+	lda #0     ;Load 0 into A which will set the zero flag
+	rts
+.export is_greater16
+	
+	

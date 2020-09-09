@@ -10,6 +10,7 @@
 .import subtract16_acc
 .import shift16_right_acc
 .import shift16_left_acc
+.import is_greater16
 
 .import add16_acc_int
 
