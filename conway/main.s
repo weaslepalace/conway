@@ -51,6 +51,8 @@ game_map: .res 960
 .segment "RESET"
 reset:
 mainLoop:
+	ldx #$FF
+	txs     ;Initialize the stack pointer. It is not init'd on reset
 
 	ldx 0
 @init_tiles:
@@ -101,7 +103,7 @@ mainLoop:
 	jsr	paintBackground
 
 	inc nmi_tick_count
-	lda #15
+	lda #2
 	cmp nmi_tick_count
 	bne @wait
 	lda #0       
@@ -625,6 +627,7 @@ paintBackground:
 	lda #>game_map
 	sta R4
 	lda #(32 * 3)
+	sta R5
 	jsr memmove8
 	rts
 
@@ -679,7 +682,7 @@ memmove8:
 	ldy #0
 @copyLoop:
 	lda (R3), Y
-	sta (R2), Y
+	sta (R1), Y
 	iny
 	cpy R5
 	bne @copyLoop
