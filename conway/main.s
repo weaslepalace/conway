@@ -3,6 +3,7 @@
 
 .include "maths.inc"
 .include "zp_reg.inc"
+.include "pop_slide.inc"
 
 .import NES_PRG_BANKS, NES_CHR_BANKS, NES_MAPPER, NES_MIRRORING
 .segment "HEADER"
@@ -54,15 +55,10 @@ mainLoop:
 	ldx #$FF
 	txs     ;Initialize the stack pointer. It is not init'd on reset
 
-	ldx 0
-@init_tiles:
 	lda #$20
-	sta tile_addr + 1, x
-	sta tile_addr, x
-	inx
-	inx
-	cpx #16
-	bne @init_tiles
+	sta tile_addr + 1
+	lda #0
+	sta tile_addr
 	
 	lda #<game_map
 	sta game_map_addr
@@ -136,28 +132,38 @@ nmi:
                  ; Removing these 4 lines made things work better
 
 ;;	lda $2002
-;	lda #0
-;	cmp update_request
-;	beq @no_update_requested 
+	lda #0
+	cmp update_request
+	beq @no_update_requested 
+
+	tsx
+	stx R1i
+	ldx #159
+	txs
+	
 
 	lda tile_addr + 1
 	sta $2006
 	lda tile_addr
 	sta $2006
-	ldy #(32 * 4)
-	dey
-@copy_tiles:
-	lda nt_buffer, Y   
-	sta $2007
-	dey               ;
-	bpl @copy_tiles           ;
+	jsr popSlide
 
+;	ldy #(32 * 4)
+;	dey
+;@copy_tiles:
+;	pla 
+;	sta $2007
+;	dey               ;
+;	bpl @copy_tiles           ;
+
+	ldx R1i
+	txs
 ;	lda #0
 ;	sta $2006
 ;	sta $2006
 ;	sta $2007
 ;	sta $2007
-;@no_update_requested:
+@no_update_requested:
 
 	inc nmi_tick ;    
 
@@ -623,24 +629,31 @@ paintBackground:
 	sta R1                      ;
 	lda map_offset + 1          ;
 	sta R2                      ;
-	lda #<game_map              ;
+	lda #<game_map + (32 * 4)   ;
 	sta R3                      ;
-	lda #>game_map              ;
+	lda #>game_map + (32 * 4)   ;
 	sta R4                      ;
 	jsr add16_acc               ;
-	lda R1                      ;
-	sta R3                      ;
-	lda R2                      ;
-	sta R4                      ;
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-	lda #<nt_buffer
-	sta R1
-	lda #>nt_buffer
-	sta R2
-	lda #(32 * 4)
-	sta R5
-	jsr memmove8
+	lda #<(game_map + (32 * 4))
+	sta R3
+	lda #>(game_map + (32 * 4))
+	sta R4
+	
+;	lda #(32 * 4)
+;	sta R5
+;	jsr memmove8
+		
+	ldy #((32 * 4) - 1)
+@pushLoop:
+	lda (R1), Y
+	sta (R3), Y
+	dey
+	bpl @pushLoop
+	
+	lda #1
+	sta update_request
 
 	;Increment map_offset in (32 * 4) byte chunks until it's > 960
 	lda map_offset
