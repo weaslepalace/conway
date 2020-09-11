@@ -81,6 +81,7 @@ mainLoop:
 	
 	lda $2002
 	lda #$0
+;	sta $2005
 	sta $2006
 	sta $2006
 	sta $2007
@@ -131,15 +132,11 @@ nmi:
                  ; filling the screen with grey sprites
                  ; Removing these 4 lines made things work better
 
-;;	lda $2002
+;	lda $2002
 	lda #0
 	cmp update_request
 	beq @no_update_requested 
 
-	tsx
-	stx R1i
-	ldx #159
-	txs
 	
 
 	lda tile_addr + 1
@@ -156,12 +153,10 @@ nmi:
 ;	dey               ;
 ;	bpl @copy_tiles           ;
 
-	ldx R1i
-	txs
-;	lda #0
-;	sta $2006
-;	sta $2006
-;	sta $2007
+	lda #0
+	sta $2006
+	sta $2006
+	sta $2007
 ;	sta $2007
 @no_update_requested:
 
