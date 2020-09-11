@@ -156,7 +156,7 @@ nmi:
 	lda #0
 	sta $2006
 	sta $2006
-	sta $2007
+;	sta $2007
 ;	sta $2007
 @no_update_requested:
 
