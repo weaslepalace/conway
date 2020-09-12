@@ -52,14 +52,15 @@ game_map: .res 960
 .segment "RESET"
 reset:
 mainLoop:
+
 	ldx #$FF
 	txs     ;Initialize the stack pointer. It is not init'd on reset
 
-	lda #$20
-	sta tile_addr + 1
-	lda #0
-	sta tile_addr
-	
+	bit $2002
+@initWait1:
+	bit $2002
+	bpl @initWait1
+
 	lda #<game_map
 	sta game_map_addr
 	sta R1
@@ -86,8 +87,11 @@ mainLoop:
 	jsr initPalette
 	jsr initAttributes
 	jsr initCursor
-	
-	lda $2002
+
+@initWait2:
+	bit $2002
+	bpl @initWait2
+
 	lda #$0
 	sta $2006
 	sta $2006
@@ -617,15 +621,23 @@ updateBackground:
 
 paintBackground:
 	;Add map_offset to game_map ;
-	lda map_offset              ;
-	sta R1                      ;
-	lda map_offset + 1          ;
-	sta R2                      ;
-	lda #<(game_map + (32 * 4)) ;
-	sta R3                      ;
-	lda #>(game_map + (32 * 4)) ; Parens matter!
-	sta R4                      ;
-	jsr add16_acc               ;
+;	lda map_offset              ;
+;	sta R1                      ;
+;	lda map_offset + 1          ;
+;	sta R2                      ;
+;	lda #<(game_map + POP_SLIDE_COUNT) ;
+;	sta R3                      ;
+;	lda #>(game_map + POP_SLIDE_COUNT) ; Parens matter!
+;	sta R4                      ;
+;	jsr add16_acc               ;
+	
+	clc
+	lda map_offset
+	adc #<(game_map + POP_SLIDE_COUNT)
+	sta R1
+	lda map_offset + 1
+	adc #>(game_map + POP_SLIDE_COUNT)
+	sta R2
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 	lda #<nt_buffer
@@ -633,7 +645,7 @@ paintBackground:
 	lda #>nt_buffer
 	sta R4
 	
-	ldy #((32 * 4) - 1)
+	ldy #(POP_SLIDE_COUNT - 1)
 @pushLoop:
 	lda (R1), Y
 	sta (R3), Y
@@ -643,14 +655,14 @@ paintBackground:
 	lda #1
 	sta update_request
 
-	;Increment map_offset in (32 * 4) byte chunks until it's > 960
+	;Increment map_offset in POP_SLIDE_COUNT byte chunks until it's > 960
 	lda map_offset
 	sta R1
 	lda map_offset + 1
 	sta R2
-	lda #<(960 - (32 * 4))
+	lda #<(960 - POP_SLIDE_COUNT)
 	sta R3
-	lda #>(960 - (32 * 4))
+	lda #>(960 - POP_SLIDE_COUNT)
 	sta R4
 	jsr is_greater16
 	bne @noOffsetReset
@@ -664,9 +676,9 @@ paintBackground:
 	rts
 
 @noOffsetReset:
-	lda #<(32 * 4)
+	lda #<POP_SLIDE_COUNT
 	sta R3
-	lda #>(32 * 4)
+	lda #>POP_SLIDE_COUNT
 	sta R4
 	jsr add16_acc
 	lda R1

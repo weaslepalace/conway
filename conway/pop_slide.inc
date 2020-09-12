@@ -1,6 +1,11 @@
 .ifndef POP_SLIDE_INC
-.define POP_SLIDE_INC
+POP_SLIDE_INC = 1
 
+POP_SLIDE_N_LINES = 5
+POP_SLIDE_COUNT   = 32 * POP_SLIDE_N_LINES
+
+.ifndef POP_SLIDE_SRC
 .import popSlide
+.endif ;POP_SLIDE_SRC
 
 .endif ;POP_SLIDE_INC
