@@ -6,7 +6,7 @@
 popSlide:
 	tsx
 	stx R1i
-	ldx #159
+	ldx #0
 	txs
 .repeat (32 * 4)
 	pla

@@ -62,8 +62,16 @@ mainLoop:
 	
 	lda #<game_map
 	sta game_map_addr
+	sta R1
 	lda #>game_map
 	sta game_map_addr + 1
+	sta R2
+	lda #<960
+	sta R3
+	lda #>960
+	sta R4
+	lda #0
+	jsr memset16 
 
 	lda #0
 	sta map_offset
@@ -81,7 +89,6 @@ mainLoop:
 	
 	lda $2002
 	lda #$0
-;	sta $2005
 	sta $2006
 	sta $2006
 	sta $2007
@@ -108,11 +115,10 @@ mainLoop:
                  
 	jsr readController 
 	jsr moveCursor
-;	jsr paintTile
 	lda tile_color
 	eor #3
 	sta tile_color
-	jsr updateBackground
+;	jsr updateBackground
 	jmp @wait
 
 
@@ -137,7 +143,6 @@ nmi:
 	cmp update_request
 	beq @no_update_requested 
 
-	
 
 	lda tile_addr + 1
 	sta $2006
@@ -145,20 +150,12 @@ nmi:
 	sta $2006
 	jsr popSlide
 
-;	ldy #(32 * 4)
-;	dey
-;@copy_tiles:
-;	pla 
-;	sta $2007
-;	dey               ;
-;	bpl @copy_tiles           ;
-
 	lda #0
 	sta $2006
 	sta $2006
-;	sta $2007
-;	sta $2007
 @no_update_requested:
+	lda #0
+	sta update_request
 
 	inc nmi_tick ;    
 
@@ -624,22 +621,18 @@ paintBackground:
 	sta R1                      ;
 	lda map_offset + 1          ;
 	sta R2                      ;
-	lda #<game_map + (32 * 4)   ;
+	lda #<(game_map + (32 * 4)) ;
 	sta R3                      ;
-	lda #>game_map + (32 * 4)   ;
+	lda #>(game_map + (32 * 4)) ; Parens matter!
 	sta R4                      ;
 	jsr add16_acc               ;
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-	lda #<(game_map + (32 * 4))
+	lda #<nt_buffer
 	sta R3
-	lda #>(game_map + (32 * 4))
+	lda #>nt_buffer
 	sta R4
 	
-;	lda #(32 * 4)
-;	sta R5
-;	jsr memmove8
-		
 	ldy #((32 * 4) - 1)
 @pushLoop:
 	lda (R1), Y
