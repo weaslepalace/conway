@@ -111,7 +111,7 @@ mainLoop:
 	jsr	paintBackground
 
 	inc nmi_tick_count
-	lda #2
+	lda #8
 	cmp nmi_tick_count
 	bne @wait
 	lda #0       
@@ -122,7 +122,7 @@ mainLoop:
 	lda tile_color
 	eor #3
 	sta tile_color
-;	jsr updateBackground
+	jsr updateBackground
 	jmp @wait
 
 
@@ -605,17 +605,46 @@ findLowerRightNeighbour:
 
 ;@param R5 - Background color
 updateBackground:
+;	lda #<game_map
+;	sta R1
+;	lda #>game_map
+;	sta R2
+;	lda #<960
+;	sta R3
+;	lda #>960
+;	sta R4
+;	lda tile_color
+;	sta R5
+;	jsr memset16
+	
+	lda #2
+	sta R5
+	clc
+	lda #>960
+	adc #>game_map
+	sta R2
 	lda #<game_map
 	sta R1
-	lda #>game_map
-	sta R2
-	lda #<960
-	sta R3
-	lda #>960
-	sta R4
-	lda tile_color
+	ldy #<960
+@updateLoop:
+	dey
+	bne @noMSBDec
+	dec R2
+@noMSBDec:
+	lda R5
+	cmp #4
+	bne @noColorOverflow
+	lda #0
 	sta R5
-	jsr memset16
+@noColorOverflow:
+	sta (R1), Y	
+	inc R5
+	cpy #0
+	bne @updateLoop
+	lda R2
+	cmp #>game_map
+	bne @updateLoop
+	
 	rts
 
 
@@ -633,10 +662,10 @@ paintBackground:
 	
 	clc
 	lda map_offset
-	adc #<(game_map + POP_SLIDE_COUNT)
+	adc #<(game_map)
 	sta R1
 	lda map_offset + 1
-	adc #>(game_map + POP_SLIDE_COUNT)
+	adc #>(game_map)
 	sta R2
 	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -647,10 +676,11 @@ paintBackground:
 	
 	ldy #(POP_SLIDE_COUNT - 1)
 @pushLoop:
+	dey
 	lda (R1), Y
 	sta (R3), Y
-	dey
-	bpl @pushLoop
+	cpy #0
+	bne @pushLoop
 	
 	lda #1
 	sta update_request
