@@ -9,7 +9,7 @@ popSlide:
 	pha
 	tsx
 	stx R1i
-	ldx #0
+	ldx #$FF
 	txs
 
 	ldx #POP_SLIDE_N_LINES

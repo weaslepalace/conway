@@ -103,6 +103,7 @@ mainLoop:
 	lda #%00011110    ;Enable sprites and background
 	sta $2001
 
+	jsr updateBackground
 @wait:
 	lda nmi_tick
 	beq @wait
@@ -122,7 +123,6 @@ mainLoop:
 	lda tile_color
 	eor #3
 	sta tile_color
-	jsr updateBackground
 	jmp @wait
 
 
@@ -628,9 +628,6 @@ updateBackground:
 	ldy #<960
 @updateLoop:
 	dey
-	bne @noMSBDec
-	dec R2
-@noMSBDec:
 	lda R5
 	cmp #4
 	bne @noColorOverflow
@@ -641,25 +638,16 @@ updateBackground:
 	inc R5
 	cpy #0
 	bne @updateLoop
+	dec R2
 	lda R2
-	cmp #>game_map
+	cmp #(>game_map) - 1
 	bne @updateLoop
 	
 	rts
 
 
 paintBackground:
-	;Add map_offset to game_map ;
-;	lda map_offset              ;
-;	sta R1                      ;
-;	lda map_offset + 1          ;
-;	sta R2                      ;
-;	lda #<(game_map + POP_SLIDE_COUNT) ;
-;	sta R3                      ;
-;	lda #>(game_map + POP_SLIDE_COUNT) ; Parens matter!
-;	sta R4                      ;
-;	jsr add16_acc               ;
-	
+	;Add map_offset to game_map 
 	clc
 	lda map_offset
 	adc #<(game_map)
@@ -667,14 +655,13 @@ paintBackground:
 	lda map_offset + 1
 	adc #>(game_map)
 	sta R2
-	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 	lda #<nt_buffer
 	sta R3
 	lda #>nt_buffer
 	sta R4
 	
-	ldy #(POP_SLIDE_COUNT - 1)
+	ldy #(POP_SLIDE_COUNT)
 @pushLoop:
 	dey
 	lda (R1), Y
