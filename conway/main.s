@@ -270,7 +270,11 @@ initAttributes:
 ;Loading it a 0xFF makes it disappear since that pos is off screen
 ;Tried removing all the code except the DMA stuff; didn't help
 initCursor:
-	lda #8     
+	;Fun limitation:
+	;Sprites are delayed 1 scanline, so writing 7 puts the top pixel at line 8
+	;Writing $FF hides the entier sprite
+	;It's therefore impossible to show a sprite at line zero
+	lda #7
 	sta sprite     ;Start cursor at 0 y position
 	lda #1 
 	sta sprite + 1 ;Load tile 1 into cursor
@@ -289,6 +293,10 @@ moveCursor:
 	sec
 	sbc #8
 	sta sprite
+	cmp #$FF
+	bne @upNotPressed
+	lda #(239 - 8)
+	sta sprite
 @upNotPressed:
 	lda buttons
 	and #$04
@@ -296,6 +304,10 @@ moveCursor:
 	lda sprite
 	clc
 	adc #8
+	sta sprite
+	cmp #$EF
+	bne @downNotPressed
+	lda #7
 	sta sprite
 @downNotPressed:
 	lda buttons
