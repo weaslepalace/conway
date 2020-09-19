@@ -103,7 +103,7 @@ mainLoop:
 	lda #%00011110    ;Enable sprites and background
 	sta $2001
 
-	jsr updateBackground
+;	jsr updateBackground
 @wait:
 	lda nmi_tick
 	beq @wait
@@ -117,9 +117,10 @@ mainLoop:
 	bne @wait
 	lda #0       
 	sta nmi_tick_count 
-                 
+;    jsr updateBackground          
 	jsr readController 
 	jsr moveCursor
+	jsr paintTile 
 	lda tile_color
 	eor #3
 	sta tile_color
@@ -293,10 +294,10 @@ moveCursor:
 	sec
 	sbc #8
 	sta sprite
-	cmp #$FF
-	bne @upNotPressed
-	lda #(239 - 8)
-	sta sprite
+	cmp #$FF           ;Check for sprite underflow
+	bne @upNotPressed  ;If underflow occurs
+	lda #(239 - 8)     ;Set sprite to the bottom row of tiles
+	sta sprite         ;
 @upNotPressed:
 	lda buttons
 	and #$04
@@ -305,10 +306,10 @@ moveCursor:
 	clc
 	adc #8
 	sta sprite
-	cmp #$EF
-	bne @downNotPressed
-	lda #7
-	sta sprite
+	cmp #$EF            ;Check for sprite overflow
+	bne @downNotPressed ;If overflow occurs
+	lda #7              ;Set sprite to the top row of tiles
+	sta sprite          ;
 @downNotPressed:
 	lda buttons
 	and #$02
@@ -326,117 +327,18 @@ moveCursor:
 	adc #8
 	sta sprite + 3
 @rightNotPressed:
-	
 	rts
 
 
 
 paintTile:
-	lda sprite
-	and #$F8
-	sta R1
-	lda #0
-	Sta R2
-	jsr shift16_left_acc
-	jsr shift16_left_acc
-	
-
-	lda #$20
-	sta R4
-	lda #0
-	sta R3
-	jsr add16_acc
-	lda R1
-	sta R5
-;	sta tile_addr
-	lda R2
-	sta R6
-;	sta tile_addr + 1
-
-	lda sprite + 3
-	sta R1
-	lda #0
-	sta R2
-	jsr shift16_right_acc
-	jsr shift16_right_acc
-	jsr shift16_right_acc
-;	lda tile_addr + 1
-	lda R6
-	sta R4
-;	lda tile_addr
-	lda R5
-	sta R3
-	jsr add16_acc 
-
-	;This is just a test
-	lda R1
-	sta R5
-	lda R2
-	sta R6
-
-	lda sprite + 3
-	sta R3
-	lda sprite
-	sta R4
-	jsr findLowerRightNeighbour
-	lda R1
-	sta tile_addr
-	lda R2
-	sta tile_addr + 1
-
-	lda R5
-	sta R1
-	lda R6
-	sta R2
-	lda sprite + 3
-	sta R3
-	lda sprite
-	sta R4
-	jsr findUpperRightNeighbour
-	lda R1
-	sta tile_addr + 2
-	lda R2
-	sta tile_addr + 3
-
-
-	lda R5
-	sta R1
-	lda R6
-	sta R2
-	lda sprite + 3
-	sta R3
-	lda sprite
-	sta R4
-	jsr findUpperLeftNeighbour
-	lda R1
-	sta tile_addr + 4
-	lda R2
-	sta tile_addr + 5
-
-	lda R5
-	sta R1
-	lda R6
-	sta R2
-	lda sprite + 3
-	sta R3
-	lda sprite
-	sta R4
-	jsr findLowerLeftNeighbour
-	lda R1
-	sta tile_addr + 6
-	lda R2
-	sta tile_addr + 7
-	;That was just a test
-
-	
-
 	lda buttons
 	and #$80
 	beq @aNotPressed
 	lda #$00
 	sta tile_color
 	lda #1
-	sta update_request
+	jsr @stroke
 	rts
 @aNotPressed:
 	lda buttons
@@ -445,12 +347,106 @@ paintTile:
 	lda #02
 	sta tile_color
 	lda #1
-	sta update_request
+	jsr @stroke
 	rts
 @bNotPressed:
-	lda #0
-	sta update_request
 	rts
+
+@stroke:
+	;Convert sprite Y address to background row address
+	lda sprite
+	clc
+	adc #1	
+	and #$F8
+	sta R1
+	lda #0
+	Sta R2
+	jsr shift16_left_acc
+	jsr shift16_left_acc
+	lda #>game_map
+	sta R4
+	lda #<game_map
+	sta R3
+	jsr add16_acc
+	lda R1
+	sta R3
+	lda R2
+	sta R4
+
+	;Add the sprite x address to the row address
+	lda sprite + 3
+	sta R1
+	lda #0
+	sta R2
+	jsr shift16_right_acc
+	jsr shift16_right_acc
+	jsr shift16_right_acc
+	jsr add16_acc 
+
+	ldy #0
+
+	lda tile_color	
+	sta (R1), Y
+	;This is just a test
+;	lda R1
+;	sta R5
+;	lda R2
+;	sta R6
+;
+;	lda sprite + 3
+;	sta R3
+;	lda sprite
+;	sta R4
+;	jsr findLowerRightNeighbour
+;	lda R1
+;	sta tile_addr
+;	lda R2
+;	sta tile_addr + 1
+;
+;	lda R5
+;	sta R1
+;	lda R6
+;	sta R2
+;	lda sprite + 3
+;	sta R3
+;	lda sprite
+;	sta R4
+;	jsr findUpperRightNeighbour
+;	lda R1
+;	sta tile_addr + 2
+;	lda R2
+;	sta tile_addr + 3
+;
+;	lda R5
+;	sta R1
+;	lda R6
+;	sta R2
+;	lda sprite + 3
+;	sta R3
+;	lda sprite
+;	sta R4
+;	jsr findUpperLeftNeighbour
+;	lda R1
+;	sta tile_addr + 4
+;	lda R2
+;	sta tile_addr + 5
+;
+;	lda R5
+;	sta R1
+;	lda R6
+;	sta R2
+;	lda sprite + 3
+;	sta R3
+;	lda sprite
+;	sta R4
+;	jsr findLowerLeftNeighbour
+;	lda R1
+;	sta tile_addr + 6
+;	lda R2
+;	sta tile_addr + 7
+;	;That was just a test
+	rts
+	
 
 ;Find the neighbour to the left of an index
 ;@param R1 - index position low byte
@@ -617,43 +613,43 @@ findLowerRightNeighbour:
 
 ;@param R5 - Background color
 updateBackground:
-;	lda #<game_map
-;	sta R1
-;	lda #>game_map
-;	sta R2
-;	lda #<960
-;	sta R3
-;	lda #>960
-;	sta R4
-;	lda tile_color
-;	sta R5
-;	jsr memset16
-	
-	lda #2
-	sta R5
-	clc
-	lda #>960
-	adc #>game_map
-	sta R2
 	lda #<game_map
 	sta R1
-	ldy #<960
-@updateLoop:
-	dey
-	lda R5
-	cmp #4
-	bne @noColorOverflow
-	lda #0
+	lda #>game_map
+	sta R2
+	lda #<960
+	sta R3
+	lda #>960
+	sta R4
+	lda tile_color
 	sta R5
-@noColorOverflow:
-	sta (R1), Y	
-	inc R5
-	cpy #0
-	bne @updateLoop
-	dec R2
-	lda R2
-	cmp #(>game_map) - 1
-	bne @updateLoop
+	jsr memset16
+	
+;	lda #2
+;	sta R5
+;	clc
+;	lda #>960
+;	adc #>game_map
+;	sta R2
+;	lda #<game_map
+;	sta R1
+;	ldy #<960
+;@updateLoop:
+;	dey
+;	lda R5
+;	cmp #4
+;	bne @noColorOverflow
+;	lda #0
+;	sta R5
+;@noColorOverflow:
+;	sta (R1), Y	
+;	inc R5
+;	cpy #0
+;	bne @updateLoop
+;	dec R2
+;	lda R2
+;	cmp #(>game_map) - 1
+;	bne @updateLoop
 	
 	rts
 
