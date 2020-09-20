@@ -33,11 +33,13 @@ inputs: .res 1
 mask: .res 1
 buttons: .res 1
 index_tile: .res 2
-tile_addr: .res 16
+tile_addr: .res 2
 tile_color: .res 1
 update_request: .res 1
+update_ack: .res 1
 game_map_addr: .res 2
 map_offset: .res 2
+
 
 
 .segment "NT_BUFFER"
@@ -77,6 +79,9 @@ mainLoop:
 	lda #0
 	sta map_offset
 	sta map_offset + 1
+	sta tile_addr
+	lda #$20
+	sta tile_addr + 1
 
 	lda #$FF
 	sta mask
@@ -103,13 +108,19 @@ mainLoop:
 	lda #%00011110    ;Enable sprites and background
 	sta $2001
 
+	lda #1
+	sta update_ack
 ;	jsr updateBackground
 @wait:
 	lda nmi_tick
 	beq @wait
 	lda #0
 	sta nmi_tick
+;	lda update_ack 
+;	bne @noUpdateAck
 	jsr	paintBackground
+	jsr updateOffsets
+;@noUpdateAck:
 
 	inc nmi_tick_count
 	lda #8
@@ -158,6 +169,9 @@ nmi:
 	lda #0
 	sta $2006
 	sta $2006
+	
+	lda #1
+	sta update_ack
 @no_update_requested:
 	lda #0
 	sta update_request
@@ -655,6 +669,10 @@ updateBackground:
 
 
 paintBackground:
+	lda update_ack
+	beq @pendingAck
+	rts
+@pendingAck:
 	;Add map_offset to game_map 
 	clc
 	lda map_offset
@@ -679,7 +697,17 @@ paintBackground:
 	
 	lda #1
 	sta update_request
+	rts
 
+updateOffsets:
+	lda update_ack
+	bne @noUpdateAck
+	rts
+@noUpdateAck:
+	lda update_request
+	beq @pendingRequest
+	rts
+@pendingRequest:
 	;Increment map_offset in POP_SLIDE_COUNT byte chunks until it's > 960
 	lda map_offset
 	sta R1
@@ -698,6 +726,8 @@ paintBackground:
 	sta tile_addr
 	lda #$20
 	sta tile_addr + 1
+	lda #0
+	sta update_ack
 	rts
 
 @noOffsetReset:
@@ -719,6 +749,8 @@ paintBackground:
 	sta tile_addr
 	lda R2
 	sta tile_addr + 1
+	lda #0
+	sta update_ack
 	rts
 
 
