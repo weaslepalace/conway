@@ -110,17 +110,13 @@ mainLoop:
 
 	lda #1
 	sta update_ack
-;	jsr updateBackground
 @wait:
 	lda nmi_tick
 	beq @wait
 	lda #0
 	sta nmi_tick
-;	lda update_ack 
-;	bne @noUpdateAck
 	jsr	paintBackground
 	jsr updateOffsets
-;@noUpdateAck:
 
 	inc nmi_tick_count
 	lda #8
@@ -128,13 +124,9 @@ mainLoop:
 	bne @wait
 	lda #0       
 	sta nmi_tick_count 
-;    jsr updateBackground          
 	jsr readController 
 	jsr moveCursor
 	jsr paintTile 
-	lda tile_color
-	eor #3
-	sta tile_color
 	jmp @wait
 
 
@@ -402,63 +394,55 @@ paintTile:
 	lda tile_color	
 	sta (R1), Y
 	;This is just a test
-;	lda R1
-;	sta R5
-;	lda R2
-;	sta R6
-;
-;	lda sprite + 3
-;	sta R3
-;	lda sprite
-;	sta R4
-;	jsr findLowerRightNeighbour
-;	lda R1
-;	sta tile_addr
-;	lda R2
-;	sta tile_addr + 1
-;
-;	lda R5
-;	sta R1
-;	lda R6
-;	sta R2
-;	lda sprite + 3
-;	sta R3
-;	lda sprite
-;	sta R4
-;	jsr findUpperRightNeighbour
-;	lda R1
-;	sta tile_addr + 2
-;	lda R2
-;	sta tile_addr + 3
-;
-;	lda R5
-;	sta R1
-;	lda R6
-;	sta R2
-;	lda sprite + 3
-;	sta R3
-;	lda sprite
-;	sta R4
-;	jsr findUpperLeftNeighbour
-;	lda R1
-;	sta tile_addr + 4
-;	lda R2
-;	sta tile_addr + 5
-;
-;	lda R5
-;	sta R1
-;	lda R6
-;	sta R2
-;	lda sprite + 3
-;	sta R3
-;	lda sprite
-;	sta R4
-;	jsr findLowerLeftNeighbour
-;	lda R1
-;	sta tile_addr + 6
-;	lda R2
-;	sta tile_addr + 7
-;	;That was just a test
+	lda R1
+	sta R5
+	lda R2
+	sta R6
+
+	lda sprite + 3
+	sta R3
+	lda sprite
+	sta R4
+	jsr findLowerRightNeighbour
+	lda tile_color
+	sta (R1), Y
+
+	lda R5
+	sta R1
+	lda R6
+	sta R2
+	lda sprite + 3
+	sta R3
+	lda sprite
+	sta R4
+	jsr findUpperRightNeighbour
+	lda tile_color
+	sta (R1), Y
+
+	lda R5
+	sta R1
+	lda R6
+	sta R2
+	lda sprite + 3
+	sta R3
+	lda sprite
+	sta R4
+	jsr findUpperLeftNeighbour
+	lda tile_color
+	sta (R1), Y
+
+	lda R5
+	sta R1
+	lda R6
+	sta R2
+	lda sprite + 3
+	sta R3
+	lda sprite
+	sta R4
+	jsr findLowerLeftNeighbour
+	lda tile_color
+	sta (R1), Y
+	;That was just a test
 	rts
 	
 
@@ -539,7 +523,7 @@ findUpperNeighbour:
 ;@return R2 - Lower Neighbour Position high byte
 findLowerNeighbour:
 	lda R3
-	cmp #232
+	cmp #231
 	beq @wrapAround
 	lda #32
 	sta R3
