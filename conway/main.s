@@ -110,9 +110,9 @@ mainLoop:
 
 	lda #1
 	sta update_ack
-@wait:
+@setupLoop:
 	lda nmi_tick
-	beq @wait
+	beq @setupLoop
 	lda #0
 	sta nmi_tick
 	jsr	paintBackground
@@ -121,14 +121,45 @@ mainLoop:
 	inc nmi_tick_count
 	lda #8
 	cmp nmi_tick_count
-	bne @wait
+	bne @setupLoop
 	lda #0       
 	sta nmi_tick_count 
+
 	jsr readController 
+
+	lda buttons	;Pressing start of select will 
+	and #$30    ;exit the setup phase and start the game
+	bne @exitSetupLoop
+
 	jsr moveCursor
 	jsr paintTile 
-	jmp @wait
 
+	jmp @setupLoop
+
+@exitSetupLoop:
+	lda #$FF    ;Hide the cursor from here on
+	sta sprite  ;
+	lda #60
+	sta nmi_tick_count
+
+@gameLoop:
+	lda nmi_tick
+	beq @gameLoop
+	lda #0
+	sta nmi_tick
+
+	jsr paintBackground
+	jsr updateOffsets
+
+	dec nmi_tick_count
+	beq @gameLoop
+	lda #20
+	sta nmi_tick_count
+
+	jsr life_execute		
+
+	jmp @gameLoop
+	
 
 nmi:
 	php    ;
@@ -350,7 +381,7 @@ paintTile:
 	lda buttons
 	and #$40
 	beq @bNotPressed
-	lda #02
+	lda #01
 	sta tile_color
 	lda #1
 	jsr @stroke
@@ -379,7 +410,7 @@ paintTile:
 	lda R2
 	sta R4
 
-	;Add the sprite x address to the row address
+;	;Add the sprite x address to the row address
 	lda sprite + 3
 	sta R1
 	lda #0
@@ -393,59 +424,251 @@ paintTile:
 
 	lda tile_color	
 	sta (R1), Y
-	;This is just a test
-	lda R1
-	sta R5
-	lda R2
-	sta R6
-
-	lda sprite + 3
-	sta R3
-	lda sprite
-	sta R4
-	jsr findLowerRightNeighbour
-	lda tile_color
-	sta (R1), Y
-
-	lda R5
-	sta R1
-	lda R6
-	sta R2
-	lda sprite + 3
-	sta R3
-	lda sprite
-	sta R4
-	jsr findUpperRightNeighbour
-	lda tile_color
-	sta (R1), Y
-
-	lda R5
-	sta R1
-	lda R6
-	sta R2
-	lda sprite + 3
-	sta R3
-	lda sprite
-	sta R4
-	jsr findUpperLeftNeighbour
-	lda tile_color
-	sta (R1), Y
-
-	lda R5
-	sta R1
-	lda R6
-	sta R2
-	lda sprite + 3
-	sta R3
-	lda sprite
-	sta R4
-	jsr findLowerLeftNeighbour
-	lda tile_color
-	sta (R1), Y
-	;That was just a test
 	rts
 	
 
+
+life_execute:
+	lda #0
+	sta R8
+	sta R3
+	sta R4
+	tay
+	tax
+
+	lda #<game_map
+	sta R5
+	lda #>game_map
+	sta R6
+
+@countingLoop:
+	lda #0
+	sta R8
+
+	jsr addRightNeighbour
+	jsr addLowerRightNeighbour
+	jsr addLowerNeighbour
+	jsr addLowerLeftNeighbour
+	jsr addLeftNeighbour
+	jsr addUpperLeftNeighbour
+	jsr addUpperNeighbour
+	jsr addUpperRightNeighbour
+
+	cmp #2
+	beq @increment
+	cmp #3
+	beq @cellLives
+	lda #0
+	jmp @storeCell
+@cellLives:
+	lda #1
+@storeCell:
+	asl
+	sta (R5), Y
+@increment:
+	inc R5
+	bne @checkCondition
+	inc R6
+
+@checkCondition:
+	lda R5
+	cmp #<(game_map + 960)
+	bne @countingLoop
+	lda R6
+	cmp #>(game_map + 960)
+	bne @countingLoop
+
+	lda #<game_map
+	sta R5
+	lda #>game_map
+	sta R6
+	ldy #0
+@shiftLoop:
+	lda (R5), Y
+	lsr
+	sta (R5), Y
+	iny
+	bne @shiftLoopCond
+	inc R6
+@shiftLoopCond:
+	cpy #<(game_map + 960)
+	bne @shiftLoop
+	lda R6
+	cmp #>(game_map + 960)
+	bne @shiftLoop
+
+	rts
+
+
+addRightNeighbour:
+	lda R5
+	sta R1
+	lda R6
+	sta R2
+	lda R3
+	pha
+	lda R4
+	pha
+	jsr findRightNeighbour
+	pla
+	sta R4
+	pla
+	sta R3
+	lda (R1), Y
+	and #$01
+	clc
+	adc R8
+	sta R8
+	rts		
+
+addLowerRightNeighbour:
+	lda R5
+	sta R1
+	lda R6
+	sta R2
+	lda R3
+	pha
+	lda R4
+	pha
+	jsr findLowerRightNeighbour
+	pla
+	sta R4
+	pla
+	sta R3
+	lda (R1), Y
+	and #$01
+	clc
+	adc R8
+	sta R8
+	rts		
+	
+addLowerNeighbour:
+	lda R5
+	sta R1
+	lda R6
+	sta R2
+	lda R3
+	pha
+	lda R4
+	pha
+	jsr findLowerNeighbour
+	pla
+	sta R4
+	pla
+	sta R3
+	lda (R1), Y
+	and #$01
+	clc
+	adc R8
+	sta R8
+	rts		
+	
+addLowerLeftNeighbour:
+	lda R5
+	sta R1
+	lda R6
+	sta R2
+	lda R3
+	pha
+	lda R4
+	pha
+	jsr findLowerLeftNeighbour
+	pla
+	sta R4
+	pla
+	sta R3
+	lda (R1), Y
+	and #$01
+	clc
+	adc R8
+	sta R8
+	rts		
+	
+addLeftNeighbour:
+	lda R5
+	sta R1
+	lda R6
+	sta R2
+	lda R3
+	pha
+	lda R4
+	pha
+	jsr findLeftNeighbour
+	pla
+	sta R4
+	pla
+	sta R3
+	lda (R1), Y
+	and #$01
+	clc
+	adc R8
+	sta R8
+	rts		
+	
+addUpperLeftNeighbour:
+	lda R5
+	sta R1
+	lda R6
+	sta R2
+	lda R3
+	pha
+	lda R4
+	pha
+	jsr findUpperLeftNeighbour
+	pla
+	sta R4
+	pla
+	sta R3
+	lda (R1), Y
+	and #$01
+	clc
+	adc R8
+	sta R8
+	rts		
+	
+addUpperNeighbour:
+	lda R5
+	sta R1
+	lda R6
+	sta R2
+	lda R3
+	pha
+	lda R4
+	pha
+	jsr findUpperNeighbour
+	pla
+	sta R4
+	pla
+	sta R3
+	lda (R1), Y
+	and #$01
+	clc
+	adc R8
+	sta R8
+	rts		
+	
+addUpperRightNeighbour:
+	lda R5
+	sta R1
+	lda R6
+	sta R2
+	lda R3
+	pha
+	lda R4
+	pha
+	jsr findUpperRightNeighbour
+	pla
+	sta R4
+	pla
+	sta R3
+	lda (R1), Y
+	and #$01
+	clc
+	adc R8
+	sta R8
+	rts		
+	
+	
 ;Find the neighbour to the left of an index
 ;@param R1 - index position low byte
 ;@param R2 - index position high byte
