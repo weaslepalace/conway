@@ -110,6 +110,7 @@ mainLoop:
 
 	lda #1
 	sta update_ack
+
 @setupLoop:
 	lda nmi_tick
 	beq @setupLoop
@@ -151,11 +152,11 @@ mainLoop:
 	jsr paintBackground
 	jsr updateOffsets
 
-	dec nmi_tick_count
-	beq @gameLoop
-	lda #20
-	sta nmi_tick_count
-
+;	dec nmi_tick_count
+;	beq @gameLoop
+;	lda #5
+;	sta nmi_tick_count
+;
 	jsr life_execute		
 
 	jmp @gameLoop
@@ -427,12 +428,18 @@ paintTile:
 	rts
 	
 
+.segment "ZEROPAGE"
+x_pos: .res 1
+y_pos: .res 1
 
+.segment "RESET"
 life_execute:
 	lda #0
 	sta R8
 	sta R3
 	sta R4
+	sta x_pos
+	sta y_pos
 	tay
 	tax
 
@@ -455,20 +462,37 @@ life_execute:
 	jsr addUpperRightNeighbour
 
 	cmp #2
-	beq @increment
+	beq @cellSurvives
 	cmp #3
 	beq @cellLives
 	lda #0
+	jmp @storeCell
+@cellSurvives:
+	lda (R5), Y
 	jmp @storeCell
 @cellLives:
 	lda #1
 @storeCell:
 	asl
+	ora (R5), Y
 	sta (R5), Y
-@increment:
+@incrementPointer:
 	inc R5
-	bne @checkCondition
+	bne @incrementXPos
 	inc R6
+
+@incrementXPos:
+	clc
+	lda x_pos
+	adc #8
+	sta x_pos
+	cmp #32
+	bne @checkCondition
+	lda #0
+	sta x_pos
+	lda #8
+	adc y_pos
+	sta y_pos
 
 @checkCondition:
 	lda R5
@@ -505,15 +529,9 @@ addRightNeighbour:
 	sta R1
 	lda R6
 	sta R2
-	lda R3
-	pha
-	lda R4
-	pha
-	jsr findRightNeighbour
-	pla
-	sta R4
-	pla
+	lda x_pos
 	sta R3
+	jsr findRightNeighbour
 	lda (R1), Y
 	and #$01
 	clc
@@ -526,15 +544,11 @@ addLowerRightNeighbour:
 	sta R1
 	lda R6
 	sta R2
-	lda R3
-	pha
-	lda R4
-	pha
-	jsr findLowerRightNeighbour
-	pla
-	sta R4
-	pla
+	lda x_pos
 	sta R3
+	lda y_pos
+	sta R4
+	jsr findLowerRightNeighbour
 	lda (R1), Y
 	and #$01
 	clc
@@ -547,15 +561,9 @@ addLowerNeighbour:
 	sta R1
 	lda R6
 	sta R2
-	lda R3
-	pha
-	lda R4
-	pha
+	lda y_pos
+	sta R3	
 	jsr findLowerNeighbour
-	pla
-	sta R4
-	pla
-	sta R3
 	lda (R1), Y
 	and #$01
 	clc
@@ -568,15 +576,11 @@ addLowerLeftNeighbour:
 	sta R1
 	lda R6
 	sta R2
-	lda R3
-	pha
-	lda R4
-	pha
-	jsr findLowerLeftNeighbour
-	pla
-	sta R4
-	pla
+	lda x_pos
 	sta R3
+	lda y_pos
+	sta R4
+	jsr findLowerLeftNeighbour
 	lda (R1), Y
 	and #$01
 	clc
@@ -589,15 +593,9 @@ addLeftNeighbour:
 	sta R1
 	lda R6
 	sta R2
-	lda R3
-	pha
-	lda R4
-	pha
-	jsr findLeftNeighbour
-	pla
-	sta R4
-	pla
+	lda x_pos
 	sta R3
+	jsr findLeftNeighbour
 	lda (R1), Y
 	and #$01
 	clc
@@ -610,15 +608,11 @@ addUpperLeftNeighbour:
 	sta R1
 	lda R6
 	sta R2
-	lda R3
-	pha
-	lda R4
-	pha
-	jsr findUpperLeftNeighbour
-	pla
-	sta R4
-	pla
+	lda x_pos
 	sta R3
+	lda y_pos
+	sta R4
+	jsr findUpperLeftNeighbour
 	lda (R1), Y
 	and #$01
 	clc
@@ -631,15 +625,9 @@ addUpperNeighbour:
 	sta R1
 	lda R6
 	sta R2
-	lda R3
-	pha
-	lda R4
-	pha
-	jsr findUpperNeighbour
-	pla
+	lda y_pos
 	sta R4
-	pla
-	sta R3
+	jsr findUpperNeighbour
 	lda (R1), Y
 	and #$01
 	clc
@@ -652,15 +640,11 @@ addUpperRightNeighbour:
 	sta R1
 	lda R6
 	sta R2
-	lda R3
-	pha
-	lda R4
-	pha
-	jsr findUpperRightNeighbour
-	pla
-	sta R4
-	pla
+	lda x_pos
 	sta R3
+	lda y_pos
+	sta R4
+	jsr findUpperRightNeighbour
 	lda (R1), Y
 	and #$01
 	clc
