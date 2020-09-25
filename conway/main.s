@@ -428,11 +428,117 @@ paintTile:
 	rts
 	
 
+
 .segment "ZEROPAGE"
 x_pos: .res 1
 y_pos: .res 1
-
+window: .res 18
+windowMaxR0: .res 2
+windowMaxR1: .res 2
+windowMaxR2: .res 2
+; [959 928 929]  [928 929 930]     [958 959 928]
+; [31  0   1  ]  [0   1   2  ] ... [30  31  0  ] 
+; [63  32  33 ]  [32  34  34 ]     [62  63  32 ]
+; 
+; [31  0   1  ]  [0   1   2  ]     [30  31  0  ]
+; [63  32  33 ]  [32  33  34 ] ... [62  63  32 ]
+; [95  64  65 ]  [64  65  66 ]     [94  95  64 ]
+; 
+; ...
+; 
+; [927 896 897]  [896 897 898]     [926 927 896]
+; [959 928 929]  [928 929 930] ... [958 959 928]
+; [31  0   1  ]  [0   1   2  ]     [30  31  0  ]
 .segment "RESET"
+
+;Initial values for the window array
+window_vals:
+	.word 959, 928, 929
+	.word 31,  0,   1
+	.word 63,  32,  33
+;Load the initial value into window in ZP
+initWindow:
+	ldx #0
+@initLoop:
+	clc
+	lda window_vals
+	sta R1
+	lda window_vals + 1
+	sta R2
+	lda (R1), X
+	adc #<game_map
+	sta window, X
+	inx
+	lda (R1), X
+	adc #>game_map
+	sta window, X
+	inx
+	cpy #18
+	bne @initLoop
+	
+	;Also load maximum values for each row
+	;Thses values will be used to compute overflow and wraparound
+	lda window
+	sta windowMaxR0
+	lda window + 1
+	sta windowMaxR0 + 1
+	lda window + (2 * 3)
+	sta windowMaxR1
+	lda window + (2 * 3) + 1
+	sta windowMaxR1 + 1
+	lda window + (2 * 6)
+	sta windowMaxR2
+	lda window + (2 * 6) + 1
+	sta windowMaxR2 + 1
+	rts
+
+	
+;Move the window 1 space to the left by incrementing all of it's values
+;If a max value is exceeded for the row, wraparound
+slideWindow:
+	;Start with Row 1, Column 1 (Index 4)
+	;If it overflows, the window will advance to the next row
+	; which changes everything
+	inc window + (2 * 4)
+	bne @noOvf11
+	inc window + (2 * 4) + 1
+@noOvf11
+	lda window + (2 * 4)
+	cmp windowR1Max
+	bne @noWrap11
+	lda window + (2 * 4) + 1
+	cmp windowR1Max + 1
+	bne @noWrap11
+	;Bring the window all the way back to the left, and down 1 row
+	jsr returnWindow
+	rts
+
+@noWrap11:
+	;Increment Row 0 Column 0
+	inc window
+	bne @noOvf01
+	inc window + 1
+@noOvf01:
+	lda window
+	cmp windowMaxR0
+	bne @noWrap01
+	lda window + 1
+	cmp windowMaxR0
+	bne @noWrap01
+	sec     ;Subtract 32 in the event of a wraparound
+	lda #32
+	sbc window
+	sta window
+	lda #0
+	sbc window + 1
+	sta window + 1
+@noWrap01:
+
+	
+	;Increment Row 1
+	;Increment Row 2
+	rts
+
 life_execute:
 	lda #0
 	sta R8
