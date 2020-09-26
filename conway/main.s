@@ -444,6 +444,9 @@ windowMaxR2: .res 2
 ; [63  32  33 ]  [32  33  34 ] ... [62  63  32 ]
 ; [95  64  65 ]  [64  65  66 ]     [94  95  64 ]
 ; 
+; [63  32  33 ]  
+; [95  64  65 ]
+; [127 96  97 ]
 ; ...
 ; 
 ; [927 896 897]  [896 897 898]     [926 927 896]
@@ -465,11 +468,11 @@ initWindow:
 	sta R1
 	lda window_vals + 1
 	sta R2
-	lda (R1), X
+	lda (R1, X)
 	adc #<game_map
 	sta window, X
 	inx
-	lda (R1), X
+	lda (R1, X)
 	adc #>game_map
 	sta window, X
 	inx
@@ -502,42 +505,245 @@ slideWindow:
 	inc window + (2 * 4)
 	bne @noOvf11
 	inc window + (2 * 4) + 1
-@noOvf11
+@noOvf11:
 	lda window + (2 * 4)
-	cmp windowR1Max
+	cmp windowMaxR1
 	bne @noWrap11
 	lda window + (2 * 4) + 1
-	cmp windowR1Max + 1
+	cmp windowMaxR1 + 1
 	bne @noWrap11
 	;Bring the window all the way back to the left, and down 1 row
 	jsr returnWindow
 	rts
 
 @noWrap11:
+
 	;Increment Row 0 Column 0
 	inc window
-	bne @noOvf01
+	bne @noOvf00
 	inc window + 1
-@noOvf01:
+@noOvf00:
 	lda window
 	cmp windowMaxR0
-	bne @noWrap01
+	bne @noWrap00
 	lda window + 1
 	cmp windowMaxR0
-	bne @noWrap01
+	bne @noWrap00
 	sec     ;Subtract 32 in the event of a wraparound
-	lda #32
-	sbc window
+	lda window
+	sbc #32
 	sta window
-	lda #0
-	sbc window + 1
+	lda window + 1
+	sbc #0
 	sta window + 1
-@noWrap01:
+@noWrap00:
 
+	;Increment Row 0 Column 1
+	inc window + (2 * 1)
+	bne @noOvf01
+	inc window + (2 * 1)  + 1
+@noOvf01:
 	
-	;Increment Row 1
-	;Increment Row 2
+	;Increment Row 0 Column 2
+	inc window + (2 * 2)
+	bne @noOvf02
+	inc window + (2 * 2) + 1
+@noOvf02:
+	lda window + (2 * 2)
+	cmp windowMaxR0
+	bne @noWrap02
+	lda window + (2 * 2) + 1
+	cmp windowMaxR0 + 1
+	bne @noWrap02
+	sec
+	lda window + (2 * 2)
+	sbc #32
+	sta window + (2 * 2)
+	lda window + (2 * 2) + 1
+	sbc #0
+	sta window + (2 * 2) + 1
+@noWrap02:
+	
+	;Increment Row 1 Column 0
+	inc window + (2 * 3)
+	bne @noOvf10
+	inc window + (2 * 3) + 1
+@noOvf10:
+	lda window + (2 * 3)
+	cmp windowMaxR1
+	bne @noWrap10
+	lda window + (2 * 3) + 1
+	cmp windowMaxR1 + 1
+	bne @noWrap10
+	sec
+	lda window + (2 * 3)
+	sbc #32
+	sta window + (2 * 3)
+	lda window + (2 * 3) + 1
+	sbc #0
+	sta window + (2 * 3) + 1
+@noWrap10:	
+
+	;Increment Row 1 Column 2
+	inc window + (2 * 5)
+	bne @noOvf12
+	inc window + (2 * 5) + 1
+@noOvf12:
+	lda window + (2 * 5)
+	cmp windowMaxR1
+	bne @noWrap12
+	lda window + (2 * 5) + 1
+	cmp windowMaxR1 + 1
+	bne @noWrap12
+	sec
+	lda window + (2 * 5)
+	sbc #32
+	sta window + (2 * 5)
+	lda window + (2 * 5) + 1
+	sbc #0
+	sta window + (2 * 5) + 1
+@noWrap12:
+
+	;Increment Row 2 Column 0
+	inc window + (2 * 6)
+	bne @noOvf20
+	inc window + (2 * 6) + 1
+@noOvf20:
+	lda window + (2 * 6)
+	cmp windowMaxR2
+	bne @noWrap20
+	lda window + (2 * 6) + 1
+	cmp windowMaxR2 + 1
+	bne @noWrap20
+	sec
+	lda window + (2 * 6)
+	sbc #32
+	sta window + (2 * 6)
+	lda window + (2 * 6) + 1
+	sbc #0
+	sta window + (2 * 6) + 1
+@noWrap20:
+
+	;Increment Row 2 Column 1
+	inc window + (2 * 7)
+	bne @noOvf21
+	inc window + (2 * 7) + 1
+@noOvf21:
+
+	;Increment Row 2 Column 2
+	inc window + (2 * 8)
+	bne @noOvf22
+	inc window + (2 * 8) + 1
+@noOvf22:
+	lda window + (2 * 8)
+	cmp windowMaxR2
+	bne @noWrap22
+	lda window + (2 * 8) + 1
+	cmp windowMaxR2 + 1
+	bne @noWrap22
+	sec
+	lda window + (2 * 8)
+	sbc #32
+	sta window + (2 * 8)
+	lda window + (2 * 8) + 1
+	sbc #0
+	sta window + (2 * 8) + 1
+@noWrap22:
+
 	rts
+
+
+;Send the window back to the first column, one row down
+returnWindow:
+	;Special case: Row 0 can wrap to the bottom
+	lda window
+	cmp #<958
+	bne @notWrapped
+	cmp #>958
+	bne @notWrapped
+	lda #31
+	sta window
+	lda #1
+	sta window + (2 * 2)
+	lda #0
+	sta window + 1
+	sta window * (2 * 1)
+	sta window + (2 * 1) + 1
+	sta window * (2 * 2) + 1
+	jmp @returnRow1
+@notWrapped:
+	;Add 33 to Row 0 Column 0
+	clc
+	lda window
+	adc #33
+	sta window
+	lda window + 1
+	adc #0
+	sta window + 1
+
+	;Increment Row 0 Column 1
+	inc window + (2 * 1)
+	bne @noOvf01
+	inc window + (2 * 1) + 1
+@noOvf01:
+	
+	;Add 33 to Row 0 Column 2
+	clc
+	lda window + (2 * 2)
+	adc #33
+	sta window + (2 * 2)
+	lda window + (2 * 2) + 1
+	adc #0
+	sta window + (2 * 2) + 1
+
+@returnRow1:
+	;Add 33 to Row 1 Column 1
+	clc
+	lda window + (2 * 3)
+	adc #33
+	sta window + (2 * 3)
+	lda window + (2 * 3) + 1
+	adc #0
+	sta window + (2 * 3) + 1
+
+	;No need to touch Row 1 Column 1
+	;It was incremented before the call to this routine
+
+	;Add 33 to Row 1 Column 2
+	clc
+	lda window + (2 * 5)
+	adc #33
+	sta window + (2 * 5)
+	lda window + (2 * 5) + 1
+	adc #0
+	sta window + (2 * 5) + 1
+
+	;Add 33 to Row 2 Column 0
+	clc
+	lda window + (2 * 6)
+	adc #33
+	sta window + (2 * 6)
+	lda window + (2 * 6) + 1
+	adc #0
+	sta window + (2 * 6) + 1
+
+	;Increment Row 2 Column 1
+	inc window + (2 * 7)
+	bne @noOvf21
+	inc window + (2 * 7) + 11
+@noOvf21:
+	
+	;Add 33 to Row 2 Column 2
+	clc
+	lda window + (2 * 8)
+	adc #33
+	sta window + (2 * 8)
+	lda window + (2 * 8) + 1
+	adc #0
+	adc window + (2 * 8) + 1
+	
+	rts
+
 
 life_execute:
 	lda #0
