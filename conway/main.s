@@ -18,7 +18,7 @@
 .segment "VECTORS"
 	.word nmi
 	.word reset
-	.word 0
+	.word debug
 
 
 .segment "GRAPHICS"
@@ -112,6 +112,7 @@ mainLoop:
 	sta update_ack
 
 @setupLoop:
+	jsr lifeExecute
 	lda nmi_tick
 	beq @setupLoop
 	lda #0
@@ -157,7 +158,7 @@ mainLoop:
 ;	lda #5
 ;	sta nmi_tick_count
 ;
-	jsr life_execute		
+	jsr lifeExecute		
 
 	jmp @gameLoop
 	
@@ -207,6 +208,10 @@ nmi:
 	pla    ;
 	plp    ;
 	rti
+
+
+debug:
+	jmp reset
 
 
 readController:
@@ -476,7 +481,7 @@ initWindow:
 	adc #>game_map
 	sta window, X
 	inx
-	cpy #18
+	cpx #18
 	bne @initLoop
 	
 	;Also load maximum values for each row
@@ -513,6 +518,8 @@ slideWindow:
 	cmp windowMaxR1 + 1
 	bne @noWrap11
 	;Bring the window all the way back to the left, and down 1 row
+	;If overflowing down the bottom, X will be set to 1 which will
+	;trigger the end of the loop
 	jsr returnWindow
 	rts
 
@@ -655,7 +662,16 @@ slideWindow:
 
 ;Send the window back to the first column, one row down
 returnWindow:
-	;Special case: Row 0 can wrap to the bottom
+	;Special case: If the center tile hit the bottom you're done
+	lda window + (2 * 4)
+	cmp #<959
+	bne @notDone
+	cmp #>959
+	bne @notDone
+	ldx #1    ;Setting X will trigger the end of the slide loop	
+@notDone:
+
+	;Another Special case: Row 0 can wrap to the bottom
 	lda window
 	cmp #<958
 	bne @notWrapped
@@ -745,95 +761,157 @@ returnWindow:
 	rts
 
 
-life_execute:
-	lda #0
-	sta R8
-	sta R3
-	sta R4
-	sta x_pos
-	sta y_pos
-	tay
-	tax
-
-	lda #<game_map
-	sta R5
-	lda #>game_map
-	sta R6
-
-@countingLoop:
-	lda #0
-	sta R8
-
-	jsr addRightNeighbour
-	jsr addLowerRightNeighbour
-	jsr addLowerNeighbour
-	jsr addLowerLeftNeighbour
-	jsr addLeftNeighbour
-	jsr addUpperLeftNeighbour
-	jsr addUpperNeighbour
-	jsr addUpperRightNeighbour
-
-	cmp #2
-	beq @cellSurvives
-	cmp #3
-	beq @cellLives
-	lda #0
-	jmp @storeCell
-@cellSurvives:
-	lda (R5), Y
-	jmp @storeCell
-@cellLives:
-	lda #1
-@storeCell:
-	asl
-	ora (R5), Y
-	sta (R5), Y
-@incrementPointer:
-	inc R5
-	bne @incrementXPos
-	inc R6
-
-@incrementXPos:
+;Add together the values of the 8 tiles around the window
+; The center tile doesn't count
+;Return the sum in R1
+tallyWindow:
 	clc
-	lda x_pos
-	adc #8
-	sta x_pos
-	cmp #32
-	bne @checkCondition
-	lda #0
-	sta x_pos
-	lda #8
-	adc y_pos
-	sta y_pos
-
-@checkCondition:
-	lda R5
-	cmp #<(game_map + 960)
-	bne @countingLoop
-	lda R6
-	cmp #>(game_map + 960)
-	bne @countingLoop
-
-	lda #<game_map
-	sta R5
-	lda #>game_map
-	sta R6
-	ldy #0
-@shiftLoop:
-	lda (R5), Y
-	lsr
-	sta (R5), Y
-	iny
-	bne @shiftLoopCond
-	inc R6
-@shiftLoopCond:
-	cpy #<(game_map + 960)
-	bne @shiftLoop
-	lda R6
-	cmp #>(game_map + 960)
-	bne @shiftLoop
-
+	lda (window), Y
+	and #$FE
+	sta R1
+	lda (window + (2 * 1)), Y
+	and #$FE
+	adc R1
+	sta R1
+	lda (window + (2 * 2)), Y
+	and #$FE
+	adc R1
+	sta R1
+	lda (window + (2 * 3)), Y
+	and #$FE
+	adc R1
+	sta R1
+	lda (window + (2 * 5)), Y
+	and #$FE
+	adc R1
+	sta R1
+	lda (window + (2 * 6)), Y
+	and #$FE
+	adc R1
+	sta R1
+	lda (window + (2 * 7)), Y
+	and #$FE
+	adc R1
+	sta R1
 	rts
+
+
+
+lifeExecute:
+	jsr initWindow
+	lda $2002
+@execute_loop:
+	jsr slideWindow    ;Be careful not to touch X until done tallying
+;	ldy #0
+;	jsr tally_window
+;	lda R1
+;	cmp #2
+;	beq @execute_loop:
+;	cmp #3
+;	bne @tile_dies
+;
+;	lda #1
+;	sta (window + (2 * 4)), Y
+;	jmp execute_loop
+;	lda #0
+;	sta (window + (2 * 4)), Y
+
+	txa    ;slide_window returns X != 0 if the window center overflows
+	bne @execute_loop	
+	lda $2002
+	rts
+
+
+
+;life_execute:
+;	lda #0
+;	sta R8
+;	sta R3
+;	sta R4
+;	sta x_pos
+;	sta y_pos
+;	tay
+;	tax
+;
+;	lda #<game_map
+;	sta R5
+;	lda #>game_map
+;	sta R6
+;
+;@countingLoop:
+;	lda #0
+;	sta R8
+;
+;	jsr addRightNeighbour
+;	jsr addLowerRightNeighbour
+;	jsr addLowerNeighbour
+;	jsr addLowerLeftNeighbour
+;	jsr addLeftNeighbour
+;	jsr addUpperLeftNeighbour
+;	jsr addUpperNeighbour
+;	jsr addUpperRightNeighbour
+;
+;	cmp #2
+;	beq @cellSurvives
+;	cmp #3
+;	beq @cellLives
+;	lda #0
+;	jmp @storeCell
+;@cellSurvives:
+;	lda (R5), Y
+;	jmp @storeCell
+;@cellLives:
+;	lda #1
+;@storeCell:
+;	asl
+;	ora (R5), Y
+;	sta (R5), Y
+;@incrementPointer:
+;	inc R5
+;	bne @incrementXPos
+;	inc R6
+;
+;@incrementXPos:
+;	clc
+;	lda x_pos
+;	adc #8
+;	sta x_pos
+;	cmp #32
+;	bne @checkCondition
+;	lda #0
+;	sta x_pos
+;	lda #8
+;	adc y_pos
+;	sta y_pos
+;
+;@checkCondition:
+;	lda R5
+;	cmp #<(game_map + 960)
+;	bne @countingLoop
+;	lda R6
+;	cmp #>(game_map + 960)
+;	bne @countingLoop
+;
+;	lda #<game_map
+;	sta R5
+;	lda #>game_map
+;	sta R6
+;	ldy #0
+;@shiftLoop:
+;	lda (R5), Y
+;	lsr
+;	sta (R5), Y
+;	iny
+;	bne @shiftLoopCond
+;	inc R6
+;@shiftLoopCond:
+;	cpy #<(game_map + 960)
+;	bne @shiftLoop
+;	lda R6
+;	cmp #>(game_map + 960)
+;	bne @shiftLoop
+;
+;	rts
 
 
 addRightNeighbour:
