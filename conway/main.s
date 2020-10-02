@@ -466,41 +466,51 @@ window_vals:
 	.word 63,  32,  33
 ;Load the initial value into window in ZP
 initWindow:
-	ldx #0
+	ldy #0
+	lda #<window_vals
+	sta R1
+	lda #>window_vals
+	sta R2
 @initLoop:
 	clc
-	lda window_vals
-	sta R1
-	lda window_vals + 1
-	sta R2
-	lda (R1, X)
+	lda (R1), Y
 	adc #<game_map
-	sta window, X
-	inx
-	lda (R1, X)
+	sta window, Y
+	iny
+	lda (R1), Y
 	adc #>game_map
-	sta window, X
-	inx
-	cpx #18
+	sta window, Y
+	iny
+	cpy #18
 	bne @initLoop
 	
 	;Also load maximum values for each row
 	;Thses values will be used to compute overflow and wraparound
+	jsr updateWindowMaximums
+	rts
+
+
+
+updateWindowMaximums:	
+	clc
 	lda window
+	adc #1
 	sta windowMaxR0
 	lda window + 1
 	sta windowMaxR0 + 1
 	lda window + (2 * 3)
+	adc #1
 	sta windowMaxR1
 	lda window + (2 * 3) + 1
 	sta windowMaxR1 + 1
 	lda window + (2 * 6)
+	adc #1
 	sta windowMaxR2
 	lda window + (2 * 6) + 1
 	sta windowMaxR2 + 1
 	rts
 
-	
+
 ;Move the window 1 space to the left by incrementing all of it's values
 ;If a max value is exceeded for the row, wraparound
 slideWindow:
@@ -534,7 +544,7 @@ slideWindow:
 	cmp windowMaxR0
 	bne @noWrap00
 	lda window + 1
-	cmp windowMaxR0
+	cmp windowMaxR0 + 1
 	bne @noWrap00
 	sec     ;Subtract 32 in the event of a wraparound
 	lda window
@@ -664,18 +674,19 @@ slideWindow:
 returnWindow:
 	;Special case: If the center tile hit the bottom you're done
 	lda window + (2 * 4)
-	cmp #<959
+	cmp #<(959 + game_map)
 	bne @notDone
-	cmp #>959
+	cmp #>(959 + game_map)
 	bne @notDone
 	ldx #1    ;Setting X will trigger the end of the slide loop	
 @notDone:
 
 	;Another Special case: Row 0 can wrap to the bottom
 	lda window
-	cmp #<958
+	cmp #<(958 + game_map) 
 	bne @notWrapped
-	cmp #>958
+	lda window + 1
+	cmp #>(958 + game_map)
 	bne @notWrapped
 	lda #31
 	sta window
@@ -757,7 +768,8 @@ returnWindow:
 	lda window + (2 * 8) + 1
 	adc #0
 	adc window + (2 * 8) + 1
-	
+
+	jsr updateWindowMaximums	
 	rts
 
 
