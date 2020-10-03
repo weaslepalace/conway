@@ -497,16 +497,21 @@ updateWindowMaximums:
 	adc #1
 	sta windowMaxR0
 	lda window + 1
+	adc #0
 	sta windowMaxR0 + 1
+	clc
 	lda window + (2 * 3)
 	adc #1
 	sta windowMaxR1
 	lda window + (2 * 3) + 1
+	adc #0
 	sta windowMaxR1 + 1
+	clc
 	lda window + (2 * 6)
 	adc #1
 	sta windowMaxR2
 	lda window + (2 * 6) + 1
+	adc #0
 	sta windowMaxR2 + 1
 	rts
 
@@ -674,11 +679,13 @@ slideWindow:
 returnWindow:
 	;Special case: If the center tile hit the bottom you're done
 	lda window + (2 * 4)
-	cmp #<(959 + game_map)
+	cmp #<(960 + game_map)
 	bne @notDone
-	cmp #>(959 + game_map)
+	lda window + (2 * 4) + 1
+	cmp #>(960 + game_map)
 	bne @notDone
-	ldx #1    ;Setting X will trigger the end of the slide loop	
+	ldx #1    ;Setting X will trigger the end of the slide loop
+	rts
 @notDone:
 
 	;Another Special case: Row 0 can wrap to the bottom
@@ -688,15 +695,16 @@ returnWindow:
 	lda window + 1
 	cmp #>(958 + game_map)
 	bne @notWrapped
-	lda #31
+	lda #<(31 + game_map)
 	sta window
-	lda #1
+	lda #<game_map
+	sta window + (2 * 1)
+	lda #<(1 + game_map)
 	sta window + (2 * 2)
-	lda #0
+	lda #>game_map
 	sta window + 1
-	sta window * (2 * 1)
 	sta window + (2 * 1) + 1
-	sta window * (2 * 2) + 1
+	sta window + (2 * 2) + 1
 	jmp @returnRow1
 @notWrapped:
 	;Add 33 to Row 0 Column 0
@@ -757,7 +765,7 @@ returnWindow:
 	;Increment Row 2 Column 1
 	inc window + (2 * 7)
 	bne @noOvf21
-	inc window + (2 * 7) + 11
+	inc window + (2 * 7) + 1
 @noOvf21:
 	
 	;Add 33 to Row 2 Column 2
@@ -813,6 +821,7 @@ lifeExecute:
 	jsr initWindow
 	lda $2002
 @execute_loop:
+	ldx #0
 	jsr slideWindow    ;Be careful not to touch X until done tallying
 ;	ldy #0
 ;	jsr tally_window
@@ -829,7 +838,7 @@ lifeExecute:
 ;	sta (window + (2 * 4)), Y
 
 	txa    ;slide_window returns X != 0 if the window center overflows
-	bne @execute_loop	
+	beq @execute_loop	
 	lda $2002
 	rts
 
