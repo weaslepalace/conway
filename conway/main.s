@@ -707,6 +707,8 @@ returnWindow:
 	sta window + (2 * 2) + 1
 	jmp @returnRow1
 @notWrapped:
+
+
 	;Add 33 to Row 0 Column 0
 	clc
 	lda window
@@ -752,6 +754,27 @@ returnWindow:
 	lda window + (2 * 5) + 1
 	adc #0
 	sta window + (2 * 5) + 1
+
+	;And an additional special case: Row 2 wraps to the top
+	lda window + (2 * 6)
+	cmp #<(958 + game_map)
+	bne @noTopWrap
+	lda window + (2 * 6) + 1
+	cmp #>(958 + game_map)
+	bne @noTopWrap
+	lda #<(31 + game_map)
+	sta window + (2 * 6)
+	lda #<(game_map)
+	sta window + (2 * 7)
+	lda #<(game_map + 1)
+	sta window + (2 * 8)
+	lda #>(game_map)
+	sta window + (2 * 6) + 1
+	sta window + (2 * 7) + 1
+	sta window + (2 * 8) + 1
+	jsr updateWindowMaximums
+	rts
+@noTopWrap:
 
 	;Add 33 to Row 2 Column 0
 	clc
