@@ -111,6 +111,12 @@ mainLoop:
 	lda #1
 	sta update_ack
 
+;;This is just a test
+	lda #1
+	sta game_map; + 100
+	sta game_map + 1; + 101
+	sta game_map + 2; + 102
+;;That was just a test
 @setupLoop:
 	jsr lifeExecute
 	lda nmi_tick
@@ -120,21 +126,21 @@ mainLoop:
 	jsr	paintBackground
 	jsr updateOffsets
 
-	inc nmi_tick_count
-	lda #8
-	cmp nmi_tick_count
-	bne @setupLoop
-	lda #0       
-	sta nmi_tick_count 
+;	inc nmi_tick_count
+;	lda #8
+;	cmp nmi_tick_count
+;	bne @setupLoop
+;	lda #0       
+;	sta nmi_tick_count 
 
-	jsr readController 
-
-	lda buttons	;Pressing start of select will 
-	and #$30    ;exit the setup phase and start the game
-	bne @exitSetupLoop
-
-	jsr moveCursor
-	jsr paintTile 
+;	jsr readController 
+;
+;	lda buttons	;Pressing start of select will 
+;	and #$30    ;exit the setup phase and start the game
+;	bne @exitSetupLoop
+;
+;	jsr moveCursor
+;	jsr paintTile 
 
 	jmp @setupLoop
 
@@ -810,30 +816,30 @@ returnWindow:
 tallyWindow:
 	clc
 	lda (window), Y
-	and #$FE
+	and #1
 	sta R1
 	lda (window + (2 * 1)), Y
-	and #$FE
+	and #1
 	adc R1
 	sta R1
 	lda (window + (2 * 2)), Y
-	and #$FE
+	and #1
 	adc R1
 	sta R1
 	lda (window + (2 * 3)), Y
-	and #$FE
+	and #1
 	adc R1
 	sta R1
 	lda (window + (2 * 5)), Y
-	and #$FE
+	and #1
 	adc R1
 	sta R1
 	lda (window + (2 * 6)), Y
-	and #$FE
+	and #1
 	adc R1
 	sta R1
 	lda (window + (2 * 7)), Y
-	and #$FE
+	and #1
 	adc R1
 	sta R1
 	rts
@@ -846,23 +852,48 @@ lifeExecute:
 @execute_loop:
 	ldx #0
 	jsr slideWindow    ;Be careful not to touch X until done tallying
-;	ldy #0
-;	jsr tally_window
-;	lda R1
-;	cmp #2
-;	beq @execute_loop:
-;	cmp #3
-;	bne @tile_dies
-;
-;	lda #1
-;	sta (window + (2 * 4)), Y
-;	jmp execute_loop
-;	lda #0
-;	sta (window + (2 * 4)), Y
+	ldy #0
+	jsr tallyWindow
+	lda R1
+	cmp #2
+	bne @cell_may_live
+	lda (window + (2 * 4)), Y
+	sta R3
+	asl
+	ora R3
+	sta (window + (2 * 4)), Y
+	jmp @cell_dies
+@cell_may_live:
+	cmp #3
+	bne @cell_dies
+	lda (window + (2 * 4)), Y
+	and #$02
+	sta (window + (2 * 4)), Y
+@cell_dies:	
 
 	txa    ;slide_window returns X != 0 if the window center overflows
 	beq @execute_loop	
 	lda $2002
+
+	lda #<(game_map)
+	sta R1
+	lda #>(game_map)
+	sta R2
+	ldy #0
+@shift_loop:
+	lda (R1), Y
+	lsr
+	sta (R1), Y
+	iny
+	bne @noIncHighByte
+	inc R2
+@noIncHighByte:
+	cpy #<960
+	bne @shift_loop
+	lda R2
+	cmp #>960
+	bne @shift_loop
+
 	rts
 
 
