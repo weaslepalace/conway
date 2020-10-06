@@ -842,6 +842,10 @@ tallyWindow:
 	and #1
 	adc R1
 	sta R1
+	lda (window + (2 * 8)), Y
+	and #1
+	adc R1
+	sta R1
 	rts
 
 
@@ -850,8 +854,6 @@ lifeExecute:
 	jsr initWindow
 	lda $2002
 @execute_loop:
-	ldx #0
-	jsr slideWindow    ;Be careful not to touch X until done tallying
 	ldy #0
 	jsr tallyWindow
 	lda R1
@@ -866,21 +868,22 @@ lifeExecute:
 @cell_may_live:
 	cmp #3
 	bne @cell_dies
-	lda (window + (2 * 4)), Y
-	and #$02
+	lda #$02 
 	sta (window + (2 * 4)), Y
 @cell_dies:	
 
+	ldx #0
+	jsr slideWindow
 	txa    ;slide_window returns X != 0 if the window center overflows
 	beq @execute_loop	
 	lda $2002
 
 	lda #<(game_map)
 	sta R1
+	tay
 	lda #>(game_map)
 	sta R2
-	ldy #0
-@shift_loop:
+@shiftLoop:
 	lda (R1), Y
 	lsr
 	sta (R1), Y
@@ -889,10 +892,10 @@ lifeExecute:
 	inc R2
 @noIncHighByte:
 	cpy #<960
-	bne @shift_loop
+	bne @shiftLoop
 	lda R2
-	cmp #>960
-	bne @shift_loop
+	cmp #>(960 + game_map)
+	bne @shiftLoop
 
 	rts
 
